@@ -575,3 +575,133 @@
   background: currentColor;
   opacity: 0.6;
 }
+
+/* ---------------------------------------------------------- Tabelle */
+
+.table {
+  display: flex;
+  flex-direction: column;
+}
+
+.table-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--ink);
+  text-align: left;
+  transition: background var(--fast) var(--ease);
+}
+
+.table-row:last-child {
+  border-bottom: 0;
+}
+
+.table-row:hover {
+  background: var(--surface-raised);
+}
+
+/* Die eigene Zeile bekommt eine Kante, keine Farbfläche — man soll sie finden,
+   ohne dass die Tabelle bunt wird. */
+.table-row.is-me {
+  box-shadow: inset 3px 0 0 var(--green);
+  padding-left: var(--space-3);
+}
+
+.rank {
+  width: 22px;
+  flex: none;
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.table-row:nth-child(1) .rank {
+  color: var(--gold);
+}
+
+.table-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.table-name strong {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+
+.table-name .small {
+  font-size: 11px;
+}
+
+.table-total {
+  color: var(--ink-strong);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  min-width: 42px;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------ Trend */
+
+.trend {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.trend--up {
+  color: var(--green);
+}
+
+.trend--down {
+  color: var(--red);
+}
+
+.trend--flat {
+  color: var(--ink-faint);
+}
+
+/* -------------------------------------------------- Wochen-Anreisser */
+
+.week-teaser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  color: var(--ink);
+  transition: border-color var(--fast) var(--ease);
+}
+
+.week-teaser:hover {
+  border-color: var(--green-edge);
+}
+
+/* ------------------------------------------------- Handicap-Verlauf */
+
+.history-pair {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 96px;
+  font-size: var(--text-base);
+}
+
+.history-arrow {
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+}

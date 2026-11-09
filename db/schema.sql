@@ -333,3 +333,8 @@ CREATE TABLE IF NOT EXISTS screenshots (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS screenshots_round_idx ON screenshots (round_id);
+
+-- Reihenfolge im Handicap-Verlauf. Alle Schritte eines Laufs entstehen in
+-- derselben Anweisung und haben damit denselben Zeitstempel — ohne diese Spalte
+-- wäre die Reihenfolge der Anzeige Zufall.
+ALTER TABLE handicap_events ADD COLUMN IF NOT EXISTS ordinal int NOT NULL DEFAULT 0;

@@ -4,6 +4,8 @@ import { body, handler, HttpError, json, param } from '../../_lib/http.js'
 import { requireUser } from '../../_lib/auth.js'
 import { loadRound, roundPayload } from '../../_lib/rounds.js'
 import { notify } from '../../_lib/notify.js'
+import { recomputeHandicap } from '../../_lib/handicap.js'
+import { seasonById } from '../../_lib/season.js'
 
 /**
  * GET   — eine Karte ansehen. Jedes Mitglied darf jede Karte sehen.
@@ -50,6 +52,10 @@ export default handler(['GET', 'PATCH'], async (req: VercelRequest, res: VercelR
                           corrected_by = ${user.id}, updated_at = now()
         WHERE id = ${roundId}
       `
+      // Eine Korrektur an einer bestätigten Karte verschiebt auch das Handicap.
+      if (loaded.row.status === 'confirmed') {
+        await recomputeHandicap(await seasonById(loaded.row.season_id), loaded.row.user_id)
+      }
     } else {
       await sql`UPDATE rounds SET updated_at = now() WHERE id = ${roundId}`
     }

@@ -70,4 +70,72 @@ await sql`INSERT INTO weeks (season_id, number, starts_at, ends_at, status)
          now() + make_interval(days => (n - 1) * 7 + 5), 'upcoming'
   FROM generate_series(2, 10) AS n`
 
+/* ------------------------------------------------------- gespielte Wochen
+ * Mit --rounds entstehen fertige Runden für die ersten Wochen, damit Tabelle,
+ * Power Rankings und Handicap-Verlauf etwas zu zeigen haben. Die Handicaps
+ * rechnet danach `POST /api/admin/recompute` durch — die Rechnung gehört in den
+ * Motor, nicht in ein Seed-Skript.
+ */
+if (process.argv.includes('--rounds')) {
+  const pastWeeks = 5
+  // Die ersten Wochen in die Vergangenheit legen, damit sie abgeschlossen sind.
+  await sql`
+    UPDATE weeks SET starts_at = now() - make_interval(days => (${pastWeeks} - number + 1) * 7),
+                     ends_at = now() - make_interval(days => (${pastWeeks} - number) * 7 + 1),
+                     status = 'closed'
+    WHERE season_id = ${sid} AND number <= ${pastWeeks}
+  `
+  // Alle gespielten Wochen laufen auf demselben Kurs — für eine Demo reicht das.
+  await sql`UPDATE weeks SET course_id = ${course[0].id} WHERE season_id = ${sid} AND number <= ${pastWeeks}`
+  // Und die Woche danach läuft gerade.
+  await sql`
+    UPDATE weeks SET starts_at = now() - interval '2 days', ends_at = now() + interval '5 days',
+                     status = 'open', course_id = ${course[0].id}
+    WHERE season_id = ${sid} AND number = ${pastWeeks + 1}
+  `
+
+  const weeks = await sql`
+    SELECT id, number FROM weeks WHERE season_id = ${sid} AND number <= ${pastWeeks} ORDER BY number
+  `
+  /* Brutto über Par je Woche — Testi schwankt, Testa spielt gleichmässiger und
+     etwas besser. Die Schläge werden danach über die Löcher verteilt, damit eine
+     Karte aussieht wie eine Karte und nicht wie eine Formel. */
+  const scripted = {
+    [a[0].id]: { hcp: 12.3, over: [16, 12, 19, 23, 14] },
+    [b[0].id]: { hcp: 9.0, over: [11, 9, 13, 10, 8] },
+  }
+
+  /** `over` Schläge auf die achtzehn Löcher verteilen, beim schwersten beginnend. */
+  const spread = (over) => {
+    const order = numbers
+      .map((n, i) => ({ n, si: sis[i] }))
+      .sort((x, y) => x.si - y.si)
+      .map((h) => h.n)
+    const extra = Object.fromEntries(numbers.map((n) => [n, 0]))
+    for (let i = 0; i < over; i++) extra[order[i % 18]]++
+    return numbers.map((n, i) => pars[i] + extra[n])
+  }
+
+  for (const w of weeks) {
+    for (const [userId, plan] of Object.entries(scripted)) {
+      const over = plan.over[w.number - 1]
+      const playing = Math.round(plan.hcp * (128 / 113) + (71.4 - 72))
+      const round = await sql`
+        INSERT INTO rounds (season_id, week_id, user_id, course_id, handicap_index,
+                            playing_handicap, status, marker_id, confirmed_by, confirmed_at,
+                            played_at)
+        VALUES (${sid}, ${w.id}, ${userId}, ${course[0].id}, ${plan.hcp}, ${playing},
+                'confirmed', ${userId === a[0].id ? b[0].id : a[0].id},
+                ${userId === a[0].id ? b[0].id : a[0].id}, now(), now())
+        RETURNING id`
+      const strokes = spread(over)
+      await sql`
+        INSERT INTO round_holes (round_id, number, strokes)
+        SELECT ${round[0].id}, n, s
+        FROM unnest(${numbers}::int[], ${strokes}::int[]) AS t(n, s)`
+    }
+  }
+  console.log(`${weeks.length} Wochen mit Runden angelegt. Handicaps rechnet /api/admin/recompute.`)
+}
+
 console.log('Testdaten angelegt. Woche 1 =', week[0].id)

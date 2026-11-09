@@ -1,21 +1,23 @@
 import { navigate } from '@/state/router'
 import { useSession } from '@/state/session'
 import { activeWeek, weekState, type LeagueData } from '@/state/league'
+import { useStandings } from '@/state/standings'
 import { formatRange, timeLeft, zurichIsoDate } from '@/core/dates'
-import { countingWeeks } from '@/core/settings'
 import { Mark } from '@/ui/Brand'
 import { initials } from '@/screens/Profile'
+import { Trend } from '@/ui/Trend'
 
 /**
  * Die Liga — der Startbildschirm.
  *
- * Oben steht, was gerade dran ist: die laufende Woche mit ihrem Kurs und der
- * Zeit, die noch bleibt. Darunter, wer mitspielt und auf welchem Handicap. Die
- * Tabelle selbst kommt, sobald es Runden gibt.
+ * Oben steht, was gerade dran ist, darunter die Tabelle. Beides auf einem
+ * Schirm, weil das die zwei Fragen sind, mit denen jemand die App öffnet: was
+ * muss ich spielen, und wo stehe ich.
  */
 export function Liga({ data, loading }: { data: LeagueData | null; loading: boolean }) {
   const { state } = useSession()
   const user = state.user!
+  const { data: ranks } = useStandings(user.id)
 
   if (loading) {
     return (
@@ -61,9 +63,11 @@ export function Liga({ data, loading }: { data: LeagueData | null; loading: bool
 
   const { season, weeks, players } = data
   const current = activeWeek(weeks)
-  const state_ = current ? weekState(current) : null
-  const myWeeks = weeks.filter((w) => w.picker?.id === user.id && !w.course)
-  const me = players.find((p) => p.id === user.id)
+  const currentState = current ? weekState(current) : null
+  const myOpenWeeks = weeks.filter((w) => w.picker?.id === user.id && !w.course)
+  const table = ranks?.table ?? []
+  const power = ranks?.power ?? []
+  const mine = table.find((row) => row.userId === user.id)
 
   return (
     <div className="page">
@@ -71,125 +75,135 @@ export function Liga({ data, loading }: { data: LeagueData | null; loading: bool
         <span className="eyebrow">{season.name}</span>
         <h1>Liga</h1>
         <p className="lede">
-          {weeks.length} Wochen · die besten {countingWeeks(season.settings)} zählen ·{' '}
+          {season.settings.weeks} Wochen · die besten{' '}
+          {Math.max(1, season.settings.weeks - season.settings.droppedWeeks)} zählen ·{' '}
           {players.filter((p) => p.status === 'active').length} Spieler
           {season.status === 'draft' && ' · noch nicht gestartet'}
           {season.pausedAt && ' · pausiert'}
         </p>
       </div>
 
-      {myWeeks.length > 0 && (
+      {myOpenWeeks.length > 0 && (
         <div className="card card--accent stack">
           <div className="card-title">
             <h3>Du bist mit dem Kurs dran</h3>
-            <span className="chip chip--green">Woche {myWeeks[0].number}</span>
+            <span className="chip chip--green">Woche {myOpenWeeks[0].number}</span>
           </div>
           <p className="muted small">
             Trag Par, Stroke-Index, Rating und Slope aus GSPro ein. Danach sehen alle, worauf
             gespielt wird.
           </p>
-          <button className="btn btn--primary" onClick={() => navigate(`/kurs/${myWeeks[0].id}`)}>
+          <button className="btn btn--primary" onClick={() => navigate(`/kurs/${myOpenWeeks[0].id}`)}>
             Kurs eintragen
           </button>
         </div>
       )}
 
       {current && (
-        <div className="card stack">
-          <div className="card-title">
-            <h3>
-              Woche {current.number}
-              {state_ === 'open' ? '' : ' — kommt noch'}
-            </h3>
-            <span className={state_ === 'open' ? 'chip chip--green' : 'chip'}>
-              {state_ === 'open' ? timeLeft(current.endsAt) : 'ab ' + formatRange(
-                zurichIsoDate(new Date(current.startsAt)),
-                zurichIsoDate(new Date(current.endsAt)),
-              )}
+        <button className="card week-teaser" onClick={() => navigate('/woche')}>
+          <span className="week-no">{current.number}</span>
+          <span className="stack stack--tight" style={{ flex: 1, gap: 2, textAlign: 'left' }}>
+            <strong>{current.course ? current.course.name : 'Kurs noch offen'}</strong>
+            <span className="muted small">
+              {currentState === 'open'
+                ? timeLeft(current.endsAt)
+                : formatRange(
+                    zurichIsoDate(new Date(current.startsAt)),
+                    zurichIsoDate(new Date(current.endsAt)),
+                  )}
+              {' · '}
+              {current.submitted} abgegeben
             </span>
-          </div>
-
-          {current.course ? (
-            <>
-              <div className="course-head">
-                <div className="stack stack--tight" style={{ gap: 2 }}>
-                  <strong>{current.course.name}</strong>
-                  <span className="muted small">
-                    {current.course.tee} · Par {current.course.par} · {current.course.lengthM} m
-                  </span>
-                </div>
-                {current.course.ratingSource === 'estimate' && (
-                  <span className="chip chip--amber">Rating geschätzt</span>
-                )}
-              </div>
-              <div className="stat-grid">
-                <div className="stat">
-                  <span className="value">{current.course.courseRating.toFixed(1)}</span>
-                  <span className="label">Rating</span>
-                </div>
-                <div className="stat">
-                  <span className="value">{current.course.slopeRating}</span>
-                  <span className="label">Slope</span>
-                </div>
-                <div className="stat">
-                  <span className="value">{current.submitted}</span>
-                  <span className="label">abgegeben</span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <p className="muted small">
-              Noch kein Kurs
-              {current.picker ? ` — ${current.picker.name} ist dran.` : ' und niemand zugeteilt.'}
-            </p>
-          )}
-        </div>
+          </span>
+          <span className={currentState === 'open' ? 'chip chip--green' : 'chip'}>
+            {currentState === 'open' ? 'läuft' : 'kommt'}
+          </span>
+        </button>
       )}
 
-      <div className="card stack">
+      {/* ------------------------------------------------------- Tabelle */}
+      <div className="card">
         <div className="card-title">
-          <h3>Spieler</h3>
-          <span className="muted small">Indoor-Handicap</span>
+          <h3>Tabelle</h3>
+          <span className="muted small">Netto-Stableford</span>
         </div>
-        <div className="list">
-          {players.map((player) => (
-            <div className="list-item" key={player.id}>
-              <span className="avatar">
-                {player.avatarUrl ? <img src={player.avatarUrl} alt="" /> : initials(player.name)}
-              </span>
-              <span className="stack stack--tight" style={{ flex: 1, gap: 0 }}>
-                <strong>
-                  {player.name}
-                  {player.id === user.id && <span className="muted small"> · du</span>}
-                </strong>
-                {player.status === 'withdrawn' ? (
-                  <span className="muted small">ausgeschieden</span>
-                ) : (
-                  player.joinedWeek > 1 && (
-                    <span className="muted small">dabei ab Woche {player.joinedWeek}</span>
-                  )
-                )}
-              </span>
-              <span className="num handicap-cell">
-                {player.indoorHandicap === null ? '—' : player.indoorHandicap.toFixed(1)}
-              </span>
-            </div>
-          ))}
-        </div>
-        {me && me.indoorHandicap === null && (
-          <div className="notice notice--warn">
-            Für dich ist noch kein Handicap hinterlegt. Trag im Profil dein Handicap draussen ein —
-            daraus ergibt sich dein Startwert.
+
+        {table.length === 0 ? (
+          <p className="muted small">Noch keine Runde gespielt.</p>
+        ) : (
+          <div className="table">
+            {table.map((row) => (
+              <button
+                key={row.userId}
+                className={`table-row${row.userId === user.id ? ' is-me' : ''}`}
+                onClick={() => navigate(`/spieler/${row.userId}`)}
+              >
+                <span className="rank">{row.rank}</span>
+                <span className="avatar">
+                  {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : initials(row.name)}
+                </span>
+                <span className="table-name">
+                  <strong>{row.name}</strong>
+                  <span className="muted small">
+                    {row.indoorHandicap === null ? 'kein Handicap' : `HCP ${row.indoorHandicap.toFixed(1)}`}
+                    {row.played > 0 && ` · ${row.played} ${row.played === 1 ? 'Runde' : 'Runden'}`}
+                    {row.unconfirmed > 0 && ' · unbestätigt'}
+                    {row.status === 'withdrawn' && ' · ausgeschieden'}
+                  </span>
+                </span>
+                <span className="table-total num">{row.total}</span>
+              </button>
+            ))}
           </div>
+        )}
+
+        {mine && mine.droppedWeeks.length > 0 && (
+          <p className="muted small">
+            Bei dir gestrichen: Woche {mine.droppedWeeks.join(' und ')}.
+          </p>
         )}
       </div>
 
-      <div className="card stack">
+      {/* ------------------------------------------------ Power Rankings */}
+      {power.length > 1 && (
+        <div className="card">
+          <div className="card-title">
+            <h3>Power Rankings</h3>
+            <button className="btn btn--quiet" onClick={() => navigate('/power')}>
+              alle
+            </button>
+          </div>
+          <p className="muted small">Form der letzten drei Runden, nicht die Saisonsumme.</p>
+          <div className="table">
+            {power.slice(0, 3).map((row) => (
+              <button
+                key={row.userId}
+                className="table-row"
+                onClick={() => navigate(`/spieler/${row.userId}`)}
+              >
+                <span className="rank">{row.rank}</span>
+                <span className="avatar">
+                  {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : initials(row.name)}
+                </span>
+                <span className="table-name">
+                  <strong>{row.name}</strong>
+                  <span className="muted small">
+                    Form {row.form.toFixed(1)} · Schnitt {row.average.toFixed(1)}
+                  </span>
+                </span>
+                <Trend value={row.trend} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card">
         <div className="card-title">
           <h3>Alle Wochen</h3>
         </div>
         <div className="list">
-          {data.weeks.map((week) => {
+          {weeks.map((week) => {
             const s = weekState(week)
             return (
               <div className="list-item" key={week.id}>

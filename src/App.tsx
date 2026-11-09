@@ -8,6 +8,8 @@ import { CourseEntry } from '@/screens/CourseEntry'
 import { Week } from '@/screens/Week'
 import { ScoreEntry } from '@/screens/ScoreEntry'
 import { Card } from '@/screens/Card'
+import { Player } from '@/screens/Player'
+import { Power } from '@/screens/Power'
 import { SeasonSetup } from '@/screens/admin/SeasonSetup'
 import { SettingsScreen } from '@/screens/admin/SettingsScreen'
 import { WeeksScreen } from '@/screens/admin/WeeksScreen'
@@ -116,6 +118,12 @@ export default function App() {
     }
     if (screen === 'karte' && segments[1]) {
       return <Card roundId={segments[1]} />
+    }
+    if (screen === 'spieler' && segments[1]) {
+      return <Player playerId={segments[1]} />
+    }
+    if (screen === 'power') {
+      return <Power />
     }
     if (screen === 'termine') {
       return <Soon title="Termine" text="Termin ausschreiben, zusagen, Flight steht." />

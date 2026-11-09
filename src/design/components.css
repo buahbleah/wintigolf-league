@@ -277,10 +277,12 @@
   letter-spacing: 0.08em;
 }
 
+/* Vier Kennzahlen sollen auf einem Handy nebeneinander stehen und nicht drei
+   plus eine verwaiste — darum eine Spaltenbreite, bei der vier hineinpassen. */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: var(--space-4) var(--space-3);
 }
 
 /* -------------------------------------------------------- Navigation */

@@ -4,6 +4,8 @@ import { body, handler, HttpError, json, param } from '../../_lib/http.js'
 import { requireUser } from '../../_lib/auth.js'
 import { loadRound, roundPayload } from '../../_lib/rounds.js'
 import { notify } from '../../_lib/notify.js'
+import { recomputeHandicap } from '../../_lib/handicap.js'
+import { seasonById } from '../../_lib/season.js'
 
 /**
  * Eine Karte bestätigen oder ablehnen — das, was im echten Golf das Austauschen
@@ -35,9 +37,14 @@ export default handler(['POST'], async (req: VercelRequest, res: VercelResponse)
 
     await sql`UPDATE round_holes SET strokes = NULL WHERE round_id = ${roundId}`
     await sql`
-      UPDATE rounds SET status = 'draft', rejected_reason = ${reason}, updated_at = now()
+      UPDATE rounds SET status = 'draft', rejected_reason = ${reason}, confirmed_by = NULL,
+                        confirmed_at = NULL, updated_at = now()
       WHERE id = ${roundId}
     `
+
+    // War die Karte schon einmal bestätigt, fällt sie jetzt aus dem Handicap
+    // wieder heraus — also neu rechnen.
+    await recomputeHandicap(await seasonById(loaded.row.season_id), loaded.row.user_id)
 
     await notify({
       userId: loaded.row.user_id,
@@ -72,11 +79,20 @@ export default handler(['POST'], async (req: VercelRequest, res: VercelResponse)
     WHERE id = ${roundId}
   `
 
+  // Jetzt, und erst jetzt, bewegt sich das Handicap.
+  const season = await seasonById(loaded.row.season_id)
+  const moved = await recomputeHandicap(season, loaded.row.user_id)
+
+  const movement =
+    moved.before !== null && moved.after !== null && moved.before !== moved.after
+      ? ` · Handicap ${moved.before.toFixed(1)} → ${moved.after.toFixed(1)}`
+      : ''
+
   await notify({
     userId: loaded.row.user_id,
     kind: 'card-confirmed',
     title: `${user.name} hat deine Karte bestätigt`,
-    body: `Woche ${loaded.row.week_number} · ${loaded.result.points} Punkte`,
+    body: `Woche ${loaded.row.week_number} · ${loaded.result.points} Punkte${movement}`,
     link: `#/karte/${roundId}`,
   })
 

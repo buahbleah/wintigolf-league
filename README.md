@@ -79,11 +79,24 @@ des Absenderrufs. `MAIL_IN_DEV=1` hebt das auf.
 
 ## Stand
 
-Etappe 1 bis 3 stehen:
+Etappe 1 bis 4 stehen:
 
 1. Gerüst, Registrierung mit Liga-Code, Anmelden, Passwort zurücksetzen, Profil
 2. Saison mit allen Einstellungen, Wochen, Kurszuteilung, Kurseingabe
 3. Score Loch für Loch, Beleg-Foto, Zähler, Bestätigen und Ablehnen
+4. Tabelle mit Streichresultaten, Handicap-Motor, Power Rankings, Spielerseite
 
-Als Nächstes kommt Etappe 4 — Tabelle, Handicap-Motor und Power Rankings. Der
-Etappenplan steht am Ende von [SPEC.md](SPEC.md).
+Als Nächstes kommt Etappe 5 — Terminplaner, Clubhaus, Benachrichtigungen und
+Badges. Der Etappenplan steht am Ende von [SPEC.md](SPEC.md).
+
+### Wie das Handicap gerechnet wird
+
+Der Motor rechnet nach jeder Bestätigung die **ganze** Saison des Spielers neu
+durch, Runde für Runde. Das kostet ein paar Abfragen mehr und ist jede davon
+wert: das Ergebnis hängt nicht davon ab, in welcher Reihenfolge Bestätigungen
+eintreffen, eine Korrektur rechnet sauber durch, und ein zweiter Lauf ändert
+nichts. Was dabei nie wandert: das Handicap, mit dem eine Runde gespielt wurde —
+das steht in der Runde selbst.
+
+`POST /api/admin/recompute` ist derselbe Lauf für alle, von Hand ausgelöst (in
+der App unter Einstellungen).

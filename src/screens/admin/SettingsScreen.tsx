@@ -17,7 +17,22 @@ export function SettingsScreen({ season, onSaved }: { season: Season; onSaved: (
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [recomputed, setRecomputed] = useState<number | null>(null)
   const started = season.startedAt !== null
+
+  async function recompute() {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await api.post<{ changed: unknown[] }>('/api/admin/recompute')
+      setRecomputed(res.changed.length)
+      onSaved()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   function set(key: keyof LeagueSettings, value: string | number | boolean) {
     setValues((prev) => ({ ...prev, [key]: value }))
@@ -74,6 +89,27 @@ export function SettingsScreen({ season, onSaved }: { season: Season; onSaved: (
         {busy ? <span className="spinner" /> : null}
         Einstellungen speichern
       </button>
+
+      <div className="card stack">
+        <div className="card-title">
+          <h3>Handicaps neu rechnen</h3>
+        </div>
+        <p className="muted small">
+          Nach einer Änderung am Verfahren oder an einer Schraube: rechnet für alle Spieler die
+          ganze Saison nochmals durch. Gespielte Runden bleiben, wie sie sind — jede hält ihr
+          eigenes Handicap fest. Zweimal gedrückt ändert nichts.
+        </p>
+        {recomputed !== null && (
+          <div className="notice notice--ok">
+            {recomputed === 0
+              ? 'Nichts zu ändern, alles steht schon richtig.'
+              : `${recomputed} ${recomputed === 1 ? 'Handicap' : 'Handicaps'} angepasst.`}
+          </div>
+        )}
+        <button className="btn btn--ghost" onClick={recompute} disabled={busy}>
+          Durchrechnen
+        </button>
+      </div>
     </div>
   )
 }
