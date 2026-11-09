@@ -705,3 +705,194 @@
   color: var(--ink-faint);
   font-size: var(--text-xs);
 }
+
+/* ---------------------------------------------------------- Termine */
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.slot-players {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.slot-players .avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+}
+
+.slot-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-soft);
+}
+
+/* --------------------------------------------------------- Clubhaus */
+
+.post {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Die eigenen Beiträge mit einer grünen Kante, wie in der Tabelle. */
+.post.is-mine {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.post-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.post-head .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+
+.post-head strong {
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+}
+
+.post-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--text-base);
+  line-height: 1.55;
+}
+
+.pin {
+  color: var(--amber);
+}
+
+/* ------------------------------------------------------ Reaktionen */
+
+.reactions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.reaction {
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.reaction:hover {
+  border-color: var(--green-edge);
+}
+
+.reaction.is-mine {
+  background: var(--green-wash);
+  border-color: var(--green-edge);
+}
+
+.reaction--add {
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.reaction-picker {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------ Mitteilungen */
+
+.notice-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--ink);
+  text-align: left;
+}
+
+.notice-row:last-child {
+  border-bottom: 0;
+}
+
+.notice-row.is-new {
+  box-shadow: inset 3px 0 0 var(--green);
+  padding-left: var(--space-3);
+}
+
+.notice-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  font-size: var(--text-sm);
+}
+
+/* ---------------------------------------------------------- Badges */
+
+.badges {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.badge-icon {
+  font-size: var(--text-base);
+}
+
+.badge-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.badge-count {
+  color: var(--green);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

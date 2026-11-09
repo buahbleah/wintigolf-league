@@ -10,6 +10,9 @@ import { ScoreEntry } from '@/screens/ScoreEntry'
 import { Card } from '@/screens/Card'
 import { Player } from '@/screens/Player'
 import { Power } from '@/screens/Power'
+import { Termine } from '@/screens/Termine'
+import { Clubhaus, Thema } from '@/screens/Clubhaus'
+import { Mitteilungen } from '@/screens/Mitteilungen'
 import { SeasonSetup } from '@/screens/admin/SeasonSetup'
 import { SettingsScreen } from '@/screens/admin/SettingsScreen'
 import { WeeksScreen } from '@/screens/admin/WeeksScreen'
@@ -126,13 +129,17 @@ export default function App() {
       return <Power />
     }
     if (screen === 'termine') {
-      return <Soon title="Termine" text="Termin ausschreiben, zusagen, Flight steht." />
+      if (league.loading && !league.data) return <Loading />
+      return <Termine data={league.data ?? empty} />
     }
     if (screen === 'clubhaus') {
-      return <Soon title="Clubhaus" text="Themen eröffnen, mitreden, Karten kommentieren." />
+      return <Clubhaus />
+    }
+    if (screen === 'thema' && segments[1]) {
+      return <Thema topicId={segments[1]} />
     }
     if (screen === 'mitteilungen') {
-      return <Soon title="Mitteilungen" text="Zusagen, Bestätigungen, Antworten." />
+      return <Mitteilungen />
     }
 
     return <Liga data={league.data} loading={league.loading && !league.data} />

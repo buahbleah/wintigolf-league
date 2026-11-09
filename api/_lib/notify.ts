@@ -21,17 +21,28 @@ export interface Notice {
   dedupeKey?: string
 }
 
-export async function notify(notice: Notice): Promise<void> {
-  await sql`
-    INSERT INTO notifications (user_id, kind, title, body, link)
+/** Gibt zurück, ob wirklich etwas Neues hingelegt wurde. */
+export async function notify(notice: Notice): Promise<boolean> {
+  /**
+   * Der Schlüssel schützt auch die Mitteilung in der App, nicht nur die Mail:
+   * der Cron läuft täglich und kann wiederholt werden, und niemand will die
+   * Erinnerung dreimal in der Glocke stehen haben.
+   */
+  const inserted = (await sql`
+    INSERT INTO notifications (user_id, kind, title, body, link, dedupe_key)
     VALUES (${notice.userId}, ${notice.kind}, ${notice.title}, ${notice.body ?? null},
-            ${notice.link ?? null})
-  `
+            ${notice.link ?? null}, ${notice.dedupeKey ?? null})
+    -- Der Index ist ein Teilindex, also muss die Bedingung hier mitstehen,
+    -- sonst findet Postgres ihn nicht.
+    ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL DO NOTHING
+    RETURNING id
+  `) as any[]
+  if (notice.dedupeKey && inserted.length === 0) return false
 
-  if (!notice.mail) return
+  if (!notice.mail) return true
 
   const rows = (await sql`SELECT email, name FROM users WHERE id = ${notice.userId}`) as any[]
-  if (!rows[0]) return
+  if (!rows[0]) return true
 
   await sendMail({
     to: rows[0].email,
@@ -45,4 +56,5 @@ export async function notify(notice: Notice): Promise<void> {
       ? { label: notice.mail.action.label, url: appUrl(`/${notice.mail.action.path}`) }
       : undefined,
   })
+  return true
 }

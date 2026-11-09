@@ -44,7 +44,9 @@ interface PlayerPage {
     bogeys: number
     worse: number
     holesPlayed: number
+    biggestCut: number
   } | null
+  badges: { kind: string; label: string; icon: string; count: number }[]
   history: {
     before: number | null
     after: number
@@ -94,7 +96,7 @@ export function Player({ playerId }: { playerId: string }) {
     )
   }
 
-  const { player, season, rounds, stats, history } = data
+  const { player, season, rounds, stats, history, badges } = data
   const clubs = CLUBS.filter((club) => player.clubDistances[club])
 
   return (
@@ -179,6 +181,30 @@ export function Player({ playerId }: { playerId: string }) {
               <span className="value">{stats.bogeys}</span>
               <span className="label">Bogeys</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {(badges.length > 0 || (stats?.biggestCut ?? 0) > 0) && (
+        <div className="card stack">
+          <div className="card-title">
+            <h3>Abzeichen</h3>
+          </div>
+          <div className="badges">
+            {badges.map((badge) => (
+              <span className="badge" key={badge.kind} title={badge.label}>
+                <span className="badge-icon">{badge.icon}</span>
+                <span className="badge-label">{badge.label}</span>
+                {badge.count > 1 && <span className="badge-count">×{badge.count}</span>}
+              </span>
+            ))}
+            {(stats?.biggestCut ?? 0) > 0 && (
+              <span className="badge" title="Grösster Schnitt am Handicap in einer Runde">
+                <span className="badge-icon">✂️</span>
+                <span className="badge-label">Grösster Cut</span>
+                <span className="badge-count">−{stats!.biggestCut.toFixed(1)}</span>
+              </span>
+            )}
           </div>
         </div>
       )}

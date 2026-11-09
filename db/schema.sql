@@ -338,3 +338,12 @@ CREATE INDEX IF NOT EXISTS screenshots_round_idx ON screenshots (round_id);
 -- derselben Anweisung und haben damit denselben Zeitstempel — ohne diese Spalte
 -- wäre die Reihenfolge der Anzeige Zufall.
 ALTER TABLE handicap_events ADD COLUMN IF NOT EXISTS ordinal int NOT NULL DEFAULT 0;
+
+-- Wurde die Dauer eines Termins von Hand gesetzt, rechnet eine weitere Zusage
+-- sie nicht mehr um.
+ALTER TABLE slots ADD COLUMN IF NOT EXISTS duration_manual boolean NOT NULL DEFAULT false;
+
+-- Damit ein zweiter Cron-Lauf nicht dieselbe Mitteilung nochmals hinlegt.
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS dedupe_key text;
+CREATE UNIQUE INDEX IF NOT EXISTS notifications_dedupe_key ON notifications (dedupe_key)
+  WHERE dedupe_key IS NOT NULL;

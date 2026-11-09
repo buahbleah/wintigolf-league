@@ -79,15 +79,16 @@ des Absenderrufs. `MAIL_IN_DEV=1` hebt das auf.
 
 ## Stand
 
-Etappe 1 bis 4 stehen:
+Etappe 1 bis 5 stehen:
 
 1. Gerüst, Registrierung mit Liga-Code, Anmelden, Passwort zurücksetzen, Profil
 2. Saison mit allen Einstellungen, Wochen, Kurszuteilung, Kurseingabe
 3. Score Loch für Loch, Beleg-Foto, Zähler, Bestätigen und Ablehnen
 4. Tabelle mit Streichresultaten, Handicap-Motor, Power Rankings, Spielerseite
+5. Terminplaner, Clubhaus, Mitteilungen, Abzeichen, Deadline-Erinnerung
 
-Als Nächstes kommt Etappe 5 — Terminplaner, Clubhaus, Benachrichtigungen und
-Badges. Der Etappenplan steht am Ende von [SPEC.md](SPEC.md).
+Als Nächstes kommt Etappe 6 — Playoffs, Siegerseite und Archiv. Der Etappenplan
+steht am Ende von [SPEC.md](SPEC.md).
 
 ### Wie das Handicap gerechnet wird
 

@@ -5,6 +5,7 @@ import { requireUser } from '../_lib/auth.js'
 import { currentSeason, settingsOf } from '../_lib/season.js'
 import { courseCard } from '../_lib/rounds.js'
 import { scoreRound } from '../../src/core/scoring.js'
+import { badgesOf } from '../_lib/badges.js'
 
 /**
  * Das Profil eines Mitspielers: Runden, Statistik, Handicap-Verlauf.
@@ -117,6 +118,15 @@ export default handler(['GET'], async (req: VercelRequest, res: VercelResponse) 
     ORDER BY created_at, ordinal
   `) as any[]
 
+  const badges = await badgesOf(season.id, playerId)
+
+  /* Der grösste Einzelschnitt am Handicap — gerechnet, nicht gespeichert. */
+  const biggestCut = history.reduce((best, event) => {
+    if (event.before_value === null) return best
+    const cut = Number(event.before_value) - Number(event.after_value)
+    return cut > best ? Math.round(cut * 10) / 10 : best
+  }, 0)
+
   const points = rounds.map((r) => r.points)
 
   json(res, 200, {
@@ -146,7 +156,9 @@ export default handler(['GET'], async (req: VercelRequest, res: VercelResponse) 
       bogeys,
       worse,
       holesPlayed,
+      biggestCut,
     },
+    badges,
     history: history.map((h) => ({
       before: h.before_value === null ? null : Number(h.before_value),
       after: Number(h.after_value),

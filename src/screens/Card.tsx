@@ -5,6 +5,8 @@ import { useSession } from '@/state/session'
 import { initials } from '@/screens/Profile'
 import { StatusChip } from '@/screens/Week'
 import { holeLabel, type HoleResult } from '@/core/scoring'
+import { Reactions, type ReactionSummary } from '@/ui/Reactions'
+import { when } from '@/screens/Clubhaus'
 
 interface RoundDetail {
   id: string
@@ -226,9 +228,118 @@ export function Card({ roundId }: { roundId: string }) {
         </div>
       )}
 
+      <Comments roundId={round.id} />
+
       <button className="btn btn--quiet" onClick={() => navigate('/woche')}>
         Zurück zur Woche
       </button>
+    </div>
+  )
+}
+
+interface Comment {
+  id: string
+  body: string
+  createdAt: string
+  authorId: string
+  authorName: string
+  avatarUrl: string | null
+  reactions: ReactionSummary[]
+}
+
+/**
+ * Kommentare an der Karte.
+ *
+ * Das ist der Ort, an dem über eine Runde geredet wird — direkt neben den Zahlen
+ * und dem Beleg, nicht irgendwo in einem Thread, in dem niemand mehr weiss,
+ * worum es ging.
+ */
+function Comments({ roundId }: { roundId: string }) {
+  const [comments, setComments] = useState<Comment[] | null>(null)
+  const [own, setOwn] = useState<ReactionSummary[]>([])
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function load() {
+    const res = await api.get<{ comments: Comment[]; reactions: ReactionSummary[] }>(
+      `/api/rounds/${roundId}/comments`,
+    )
+    setComments(res.comments)
+    setOwn(res.reactions)
+  }
+
+  useEffect(() => {
+    void load().catch(() => setComments([]))
+  }, [roundId])
+
+  async function send() {
+    if (!text.trim()) return
+    setBusy(true)
+    try {
+      const res = await api.post<{ comments: Comment[]; reactions: ReactionSummary[] }>(
+        `/api/rounds/${roundId}/comments`,
+        { body: text },
+      )
+      setComments(res.comments)
+      setOwn(res.reactions)
+      setText('')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card stack">
+      <div className="card-title">
+        <h3>Sagt dazu</h3>
+      </div>
+
+      <Reactions targetType="round" targetId={roundId} reactions={own} onChange={load} />
+
+      {comments?.map((comment) => (
+        <div className="post" key={comment.id}>
+          <div className="post-head">
+            <span className="avatar">
+              {comment.avatarUrl ? (
+                <img src={comment.avatarUrl} alt="" />
+              ) : (
+                initials(comment.authorName)
+              )}
+            </span>
+            <strong>{comment.authorName}</strong>
+            <span className="muted small">{when(comment.createdAt)}</span>
+          </div>
+          <p className="post-body">{comment.body}</p>
+          <Reactions
+            targetType="post"
+            targetId={comment.id}
+            reactions={comment.reactions}
+            onChange={load}
+          />
+        </div>
+      ))}
+
+      <div className="row">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Kommentieren"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void send()
+          }}
+          style={{
+            flex: 1,
+            minHeight: 44,
+            padding: '0 12px',
+            background: 'var(--surface-raised)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+          }}
+        />
+        <button className="btn btn--ghost" onClick={send} disabled={busy || !text.trim()}>
+          Senden
+        </button>
+      </div>
     </div>
   )
 }
