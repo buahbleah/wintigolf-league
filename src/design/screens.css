@@ -1,0 +1,157 @@
+/* Was nur ein einzelner Screen braucht. */
+
+/* ------------------------------------------------------------ Eingang */
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  justify-content: center;
+  min-height: 100%;
+  padding: var(--space-6) 0;
+}
+
+.welcome-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.welcome-hero h1 {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.welcome-hero h1 span {
+  color: var(--green);
+}
+
+.welcome-hero .lede {
+  max-width: 34ch;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.welcome-switch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ---------------------------------------------------------- Kopfzeile */
+
+.icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-muted);
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.icon-btn:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.icon-btn .dot {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.topbar .avatar {
+  width: 34px;
+  height: 34px;
+  font-size: var(--text-xs);
+  border: 0;
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------------- Liga */
+
+.join-code {
+  font-family: var(--font-num);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--green);
+  text-align: center;
+  padding: var(--space-3);
+  background: var(--green-wash);
+  border: 1px dashed var(--green-edge);
+  border-radius: var(--radius-sm);
+}
+
+.join-code + p code {
+  font-family: var(--font-num);
+  font-size: var(--text-xs);
+  color: var(--ink);
+  word-break: break-all;
+}
+
+/* ------------------------------------------------------------ Profil */
+
+.handicap-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.handicap-pair .value {
+  font-size: var(--text-3xl);
+}
+
+.club-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2) var(--space-4);
+}
+
+.club-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.club-row input {
+  width: 72px;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  text-align: right;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.club-row input:focus {
+  outline: none;
+  border-color: var(--green-edge);
+}

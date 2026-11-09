@@ -1,0 +1,97 @@
+/*
+ * Wintigolf League — Gestaltungstoken.
+ *
+ * Eine dunkle Grundfläche, ein einziger Akzent. Keine Farbe steht irgendwo
+ * sonst im Code: wenn hier etwas geändert wird, ändert sich die ganze App.
+ *
+ * Der Raum, in dem gespielt wird, ist abgedunkelt — deshalb ist Dunkel nicht
+ * ein Modus, sondern der Normalfall. Es gibt keinen hellen Gegenpart.
+ */
+
+:root {
+  /* --- Flächen ------------------------------------------------------- */
+  --bg: #0b0f0d; /* fast schwarz, mit einem Stich ins Grüne */
+  --bg-deep: #070a09; /* hinter allem, z. B. Scrollbereich */
+  --surface: #121816; /* Karten */
+  --surface-raised: #19211d; /* Karten auf Karten, Eingabefelder */
+  --surface-hover: #1f2823;
+  --border: #253029;
+  --border-soft: #1b2320;
+
+  /* --- Schrift ------------------------------------------------------- */
+  --ink: #e9efea; /* normale Schrift */
+  --ink-strong: #ffffff; /* Zahlen, Titel */
+  --ink-muted: #8d9b92; /* Nebensachen, Einheiten */
+  --ink-faint: #5d6b63; /* Platzhalter, deaktiviert */
+
+  /* --- Akzent: Fairway-Grün ------------------------------------------ */
+  --green: #37d67a;
+  --green-bright: #5ae698;
+  --green-dim: #1d8b50;
+  --green-wash: rgba(55, 214, 122, 0.12);
+  --green-edge: rgba(55, 214, 122, 0.34);
+  --on-green: #04140b; /* Schrift auf grüner Fläche */
+
+  /* --- Zustände ------------------------------------------------------- */
+  --amber: #e3b25c; /* unbestätigt, wartet */
+  --amber-wash: rgba(227, 178, 92, 0.12);
+  --red: #e5684f; /* abgelehnt, Fehler */
+  --red-wash: rgba(229, 104, 79, 0.12);
+  --gold: #d9b45b; /* Sieger, Badges */
+  --blue: #6aa9e9; /* Information */
+
+  /* --- Stableford-Skala ------------------------------------------------
+   * Von null Punkten bis Eagle plus. Wird in Scorecards und Heatmaps
+   * verwendet, damit eine Runde auf einen Blick lesbar ist. */
+  --pts-0: #2a211f;
+  --pts-1: #2d2b24;
+  --pts-2: #233029;
+  --pts-3: #1f4d33;
+  --pts-4: #1d7a4b;
+  --pts-5: #2aa863;
+
+  /* --- Typografie ----------------------------------------------------- */
+  --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-num: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.5rem;
+  --text-hero: 3.25rem;
+
+  /* --- Raster ---------------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.5), 0 16px 40px rgba(0, 0, 0, 0.45);
+
+  /* --- Bewegung -------------------------------------------------------- */
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --fast: 120ms;
+  --medium: 220ms;
+
+  /* Höhe der unteren Navigation, damit Inhalte nicht darunter verschwinden. */
+  --nav-height: 64px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fast: 0ms;
+    --medium: 0ms;
+  }
+}
