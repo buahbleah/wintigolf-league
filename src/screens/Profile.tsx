@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { api, ApiError } from '@/net/api'
 import { useSession } from '@/state/session'
+import { navigate } from '@/state/router'
 import { CLUBS, type User } from '@/core/types'
 
 /**
@@ -174,9 +175,14 @@ export function Profile() {
         Speichern
       </button>
 
-      <button className="btn btn--quiet" onClick={() => void signOut()}>
-        Abmelden
-      </button>
+      <div className="row" style={{ justifyContent: 'center' }}>
+        <button className="btn btn--quiet" onClick={() => navigate('/regeln')}>
+          Regeln
+        </button>
+        <button className="btn btn--quiet" onClick={() => void signOut()}>
+          Abmelden
+        </button>
+      </div>
     </div>
   )
 }

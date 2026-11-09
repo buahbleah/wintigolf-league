@@ -1011,3 +1011,34 @@
   font-weight: 700;
   letter-spacing: -0.03em;
 }
+
+/* ---------------------------------------------------------- Regeln */
+
+.rule {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.rule:last-child {
+  border-bottom: 0;
+}
+
+.rule strong {
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* -------------------------------------------------------- Diagramme */
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--space-2) 0;
+}

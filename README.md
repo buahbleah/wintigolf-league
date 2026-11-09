@@ -24,6 +24,7 @@ besten in einem schmalen Fenster anschauen.
 | `npm run db:apply` | Schema aus `db/schema.sql` einspielen (idempotent) |
 | `node scripts/seed-demo.mjs` | Testsaison mit zwei Konten anlegen (nur Entwicklung) |
 | `node scripts/seed-playoffs.mjs --force` | Fertige Grundsaison mit vier Spielern, um Playoffs zu testen |
+| `node scripts/make-icons.mjs` | App-Icons neu erzeugen |
 | `npm test` | Tests |
 | `npm run typecheck` | TypeScript prüfen |
 
@@ -87,7 +88,7 @@ des Absenderrufs. `MAIL_IN_DEV=1` hebt das auf.
 
 ## Stand
 
-Etappe 1 bis 6 stehen:
+Alle sieben Etappen stehen:
 
 1. Gerüst, Registrierung mit Liga-Code, Anmelden, Passwort zurücksetzen, Profil
 2. Saison mit allen Einstellungen, Wochen, Kurszuteilung, Kurseingabe
@@ -95,9 +96,10 @@ Etappe 1 bis 6 stehen:
 4. Tabelle mit Streichresultaten, Handicap-Motor, Power Rankings, Spielerseite
 5. Terminplaner, Clubhaus, Mitteilungen, Abzeichen, Deadline-Erinnerung
 6. Playoffs im Matchplay, Siegerseite, Handicap-Übernahme in die nächste Saison
+7. Regelseite, Verlaufsgrafik, Loch-für-Loch-Vergleich, App-Icons, Deployment
 
-Offen ist Etappe 7 — Design-Feinschliff und Deployment. Der Etappenplan steht am
-Ende von [SPEC.md](SPEC.md).
+Zum Livegang fehlt nur noch das Vercel-Projekt — die Schritte stehen in
+[DEPLOY.md](DEPLOY.md).
 
 ### Wie das Handicap gerechnet wird
 

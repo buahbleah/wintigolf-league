@@ -14,6 +14,7 @@ import { Termine } from '@/screens/Termine'
 import { Clubhaus, Thema } from '@/screens/Clubhaus'
 import { Mitteilungen } from '@/screens/Mitteilungen'
 import { Playoffs } from '@/screens/Playoffs'
+import { Regeln } from '@/screens/Regeln'
 import { SeasonSetup } from '@/screens/admin/SeasonSetup'
 import { SettingsScreen } from '@/screens/admin/SettingsScreen'
 import { WeeksScreen } from '@/screens/admin/WeeksScreen'
@@ -135,6 +136,10 @@ export default function App() {
     }
     if (screen === 'spieler' && segments[1]) {
       return <Player playerId={segments[1]} />
+    }
+    if (screen === 'regeln') {
+      if (league.loading && !league.data) return <Loading />
+      return <Regeln data={league.data ?? empty} />
     }
     if (screen === 'playoffs') {
       return <Playoffs />

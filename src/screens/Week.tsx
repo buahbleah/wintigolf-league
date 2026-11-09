@@ -5,6 +5,7 @@ import { useSession } from '@/state/session'
 import { activeWeek, weekState, type LeagueData } from '@/state/league'
 import { formatRange, timeLeft, zurichIsoDate } from '@/core/dates'
 import { initials } from '@/screens/Profile'
+import { BarChart } from '@/ui/Chart'
 
 interface RoundSummary {
   id: string
@@ -31,7 +32,15 @@ export function Week({ data }: { data: LeagueData }) {
   const me = state.user!
   const [rounds, setRounds] = useState<RoundSummary[] | null>(null)
 
-  const week = activeWeek(data.weeks)
+  /**
+   * Läuft gerade keine Woche — weil die Grundsaison durch ist oder die nächste
+   * erst beginnt —, zeigt der Screen die letzte gespielte. Sonst stünde hier
+   * «nichts zu spielen», während nebenan zehn Wochen voller Karten liegen.
+   */
+  const closedWeeks = data.weeks.filter(
+    (w) => w.kind === 'regular' && weekState(w) === 'closed',
+  )
+  const week = activeWeek(data.weeks) ?? closedWeeks[closedWeeks.length - 1] ?? null
   const settings = data.season?.settings
 
   useEffect(() => {
@@ -136,13 +145,18 @@ export function Week({ data }: { data: LeagueData }) {
             </div>
           </div>
           {settings && (
-            <p className="muted small">
-              Tee {week.course.tee} für alle · Gimmie {settings.gimmieMetres} m · Wind{' '}
-              {settings.wind} · Greens {settings.greenSpeed} ·{' '}
-              {settings.mulligans ? 'Mulligans erlaubt' : 'keine Mulligans'} ·{' '}
-              {settings.practiceRounds ? 'Proberunden erlaubt' : 'keine Proberunden'} · nie allein
-              spielen
-            </p>
+            <>
+              <p className="muted small">
+                Tee {week.course.tee} für alle · Gimmie {settings.gimmieMetres} m · Wind{' '}
+                {settings.wind} · Greens {settings.greenSpeed} ·{' '}
+                {settings.mulligans ? 'Mulligans erlaubt' : 'keine Mulligans'} ·{' '}
+                {settings.practiceRounds ? 'Proberunden erlaubt' : 'keine Proberunden'} · nie
+                allein spielen
+              </p>
+              <button className="btn btn--quiet" onClick={() => navigate('/regeln')}>
+                Alle Regeln
+              </button>
+            </>
           )}
         </div>
       )}
@@ -158,7 +172,9 @@ export function Week({ data }: { data: LeagueData }) {
               <p className="muted small">
                 {mine
                   ? `Angefangen: ${mine.played} von 18 Löchern.`
-                  : 'Noch nichts eingetragen. Du kannst schon während der Runde Loch für Loch eintragen.'}
+                  : state_ === 'closed'
+                    ? 'Für diese Woche hast du nichts abgegeben — das sind null Punkte.'
+                    : 'Noch nichts eingetragen. Du kannst schon während der Runde Loch für Loch eintragen.'}
               </p>
               <button
                 className="btn btn--primary"
@@ -240,12 +256,80 @@ export function Week({ data }: { data: LeagueData }) {
             )}
           </div>
         )}
-        {open.length > 0 && (
+        {/* Erst wenn die Karten geladen sind — sonst stünde hier kurz die ganze
+            Liga als «offen», obwohl längst alle abgegeben haben. */}
+        {rounds !== null && open.length > 0 && (
           <p className="muted small">
-            Offen: {open.map((p) => p.name).join(', ')}
+            {state_ === 'closed' ? 'Nichts abgegeben: ' : 'Offen: '}
+            {open.map((p) => p.name).join(', ')}
           </p>
         )}
       </div>
+
+      <HoleStats weekId={week.id} />
+    </div>
+  )
+}
+
+interface HoleStat {
+  number: number
+  par: number
+  strokeIndex: number
+  entries: number
+  best: number | null
+  averageStrokes: number | null
+  toPar: number | null
+}
+
+/**
+ * Welches Loch die Liga gefressen hat.
+ *
+ * Gezeigt wird der Schnitt gegen Par über alle eingereichten Karten der Woche —
+ * das schwerste Loch rot, damit man weiss, worüber man sich hinterher unterhält.
+ */
+function HoleStats({ weekId }: { weekId: string }) {
+  const [holes, setHoles] = useState<HoleStat[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void api
+      .get<{ holes: HoleStat[] }>(`/api/weeks/${weekId}`)
+      .then((res) => {
+        if (!cancelled) setHoles(res.holes)
+      })
+      .catch(() => {
+        if (!cancelled) setHoles([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [weekId])
+
+  const played = holes?.filter((h) => h.entries > 0) ?? []
+  if (played.length === 0) return null
+
+  const hardest = played.reduce((worst, hole) =>
+    (hole.toPar ?? 0) > (worst.toPar ?? 0) ? hole : worst,
+  )
+
+  return (
+    <div className="card">
+      <div className="card-title">
+        <h3>Loch für Loch</h3>
+        <span className="muted small">Schnitt gegen Par</span>
+      </div>
+      <BarChart
+        bars={played.map((hole) => ({
+          label: String(hole.number),
+          value: hole.toPar ?? 0,
+          highlight: hole.number === hardest.number,
+        }))}
+      />
+      <p className="muted small">
+        Loch {hardest.number} war das härteste: Par {hardest.par}, im Schnitt{' '}
+        {hardest.averageStrokes?.toFixed(1)} Schläge
+        {hardest.best !== null && ` · am besten eine ${hardest.best}`}.
+      </p>
     </div>
   )
 }

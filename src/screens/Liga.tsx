@@ -6,6 +6,7 @@ import { formatRange, timeLeft, zurichIsoDate } from '@/core/dates'
 import { Mark } from '@/ui/Brand'
 import { initials } from '@/screens/Profile'
 import { Trend } from '@/ui/Trend'
+import { LineChart } from '@/ui/Chart'
 
 /**
  * Die Liga — der Startbildschirm.
@@ -174,6 +175,38 @@ export function Liga({ data, loading }: { data: LeagueData | null; loading: bool
           </p>
         )}
       </div>
+
+      {/* --------------------------------------------------- Verlauf */}
+      {ranks?.season && table.some((row) => row.played > 1) && (
+        <div className="card">
+          <div className="card-title">
+            <h3>Verlauf</h3>
+            <span className="muted small">Punkte, aufaddiert</span>
+          </div>
+          <LineChart
+            weeks={ranks.season.weeks}
+            lines={table.map((row) => {
+              let sum = 0
+              return {
+                id: row.userId,
+                name: row.name,
+                points: Array.from({ length: ranks.season!.weeks }, (_, i) => {
+                  const value = row.byWeek[i + 1]
+                  if (value === null || value === undefined) return null
+                  sum += value
+                  return sum
+                }),
+                emphasis:
+                  row.userId === user.id ? 'me' : row.rank === 1 ? 'top' : 'rest',
+              }
+            })}
+          />
+          <p className="muted small">
+            Grün ist deine Linie, Gold die Spitze. Eine Linie beginnt dort, wo jemand die erste
+            Runde abgegeben hat.
+          </p>
+        </div>
+      )}
 
       {/* ------------------------------------------------ Power Rankings */}
       {power.length > 1 && (
