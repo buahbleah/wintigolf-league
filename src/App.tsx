@@ -1,8 +1,13 @@
 import { useSession } from '@/state/session'
+import { useLeague } from '@/state/league'
 import { navigate, useRoute } from '@/state/router'
 import { Welcome } from '@/screens/Welcome'
 import { Liga } from '@/screens/Liga'
 import { Profile, initials } from '@/screens/Profile'
+import { CourseEntry } from '@/screens/CourseEntry'
+import { SeasonSetup } from '@/screens/admin/SeasonSetup'
+import { SettingsScreen } from '@/screens/admin/SettingsScreen'
+import { WeeksScreen } from '@/screens/admin/WeeksScreen'
 import { Wordmark } from '@/ui/Brand'
 import { IconBell, IconCalendar, IconCard, IconChat, IconFlag, IconUser } from '@/ui/Icons'
 
@@ -14,6 +19,7 @@ import { IconBell, IconCalendar, IconCard, IconChat, IconFlag, IconUser } from '
  */
 export default function App() {
   const { state, loading } = useSession()
+  const league = useLeague()
   const { path, segments } = useRoute()
 
   if (loading) {
@@ -37,12 +43,20 @@ export default function App() {
   }
 
   const screen = segments[0] ?? ''
+  const isAdmin = state.user.role === 'admin'
 
   return (
     <div className="app">
       <header className="topbar">
-        <Wordmark />
+        <a href="#/" aria-label="Zur Liga">
+          <Wordmark />
+        </a>
         <div className="spacer" />
+        {isAdmin && (
+          <button className="icon-btn" onClick={() => navigate('/admin')} aria-label="Verwaltung">
+            <IconCard />
+          </button>
+        )}
         <button
           className="icon-btn"
           onClick={() => navigate('/mitteilungen')}
@@ -56,21 +70,7 @@ export default function App() {
         </button>
       </header>
 
-      {screen === 'profil' ? (
-        <Profile />
-      ) : screen === 'woche' ? (
-        <Soon title="Die Woche" text="Kurs, Score eintragen, Screenshot hochladen, bestätigen." />
-      ) : screen === 'termine' ? (
-        <Soon title="Termine" text="Termin ausschreiben, zusagen, Flight steht." />
-      ) : screen === 'clubhaus' ? (
-        <Soon title="Clubhaus" text="Themen eröffnen, mitreden, Karten kommentieren." />
-      ) : screen === 'mitteilungen' ? (
-        <Soon title="Mitteilungen" text="Zusagen, Bestätigungen, Antworten." />
-      ) : screen === 'admin' ? (
-        <Soon title="Verwaltung" text="Saison anlegen, Wochen setzen, Kurse zuteilen." />
-      ) : (
-        <Liga />
-      )}
+      {renderScreen()}
 
       <nav className="nav">
         <Tab to="/" icon={<IconFlag />} label="Liga" active={path === '/'} />
@@ -79,6 +79,60 @@ export default function App() {
         <Tab to="/clubhaus" icon={<IconChat />} label="Clubhaus" active={screen === 'clubhaus'} />
         <Tab to="/profil" icon={<IconUser />} label="Profil" active={screen === 'profil'} />
       </nav>
+    </div>
+  )
+
+  function renderScreen() {
+    if (screen === 'profil') return <Profile />
+
+    if (screen === 'kurs' && segments[1]) {
+      return <CourseEntry weekId={segments[1]} data={league.data ?? { season: null, weeks: [], players: [] }} onSaved={league.reload} />
+    }
+
+    if (screen === 'admin') {
+      if (!isAdmin) return <Soon title="Verwaltung" text="Das sieht nur der Admin." />
+      const area = segments[1] ?? ''
+      if (area === 'saison') return <SeasonSetup onDone={league.reload} />
+      if (!league.data?.season) return <SeasonSetup onDone={league.reload} />
+      if (area === 'einstellungen') {
+        return <SettingsScreen season={league.data.season} onSaved={league.reload} />
+      }
+      if (area === 'wochen') return <WeeksScreen data={league.data} onChange={league.reload} />
+      return <AdminHome />
+    }
+
+    if (screen === 'woche') {
+      return <Soon title="Die Woche" text="Score eintragen, Screenshot hochladen, bestätigen lassen." />
+    }
+    if (screen === 'termine') {
+      return <Soon title="Termine" text="Termin ausschreiben, zusagen, Flight steht." />
+    }
+    if (screen === 'clubhaus') {
+      return <Soon title="Clubhaus" text="Themen eröffnen, mitreden, Karten kommentieren." />
+    }
+    if (screen === 'mitteilungen') {
+      return <Soon title="Mitteilungen" text="Zusagen, Bestätigungen, Antworten." />
+    }
+
+    return <Liga data={league.data} loading={league.loading} />
+  }
+}
+
+function AdminHome() {
+  return (
+    <div className="page">
+      <div className="page-head">
+        <span className="eyebrow">Verwaltung</span>
+        <h1>Was willst du tun?</h1>
+      </div>
+      <div className="stack stack--tight">
+        <button className="btn btn--ghost btn--block" onClick={() => navigate('/admin/wochen')}>
+          Wochen und Kurszuteilung
+        </button>
+        <button className="btn btn--ghost btn--block" onClick={() => navigate('/admin/einstellungen')}>
+          Einstellungen der Liga
+        </button>
+      </div>
     </div>
   )
 }
