@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+coverage
+.vite
+tsconfig.tsbuildinfo
+.DS_Store
+
+# Zugangsdaten gehören niemals ins Repository.
+.env
+.env.local
+.env.*.local
+*.local
