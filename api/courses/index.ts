@@ -63,7 +63,25 @@ async function create(req: VercelRequest, res: VercelResponse) {
   const settings = settingsOf(season)
   const input = body(req)
 
-  const weekId = requireString(input.weekId, 'Die Woche', 40)
+  /**
+   * In der Grundsaison hängt der Kurs an der Woche, im Playoff am Match: dort
+   * wählt der höher gesetzte Spieler, und zwei Paarungen derselben Runde können
+   * auf verschiedenen Plätzen spielen.
+   */
+  const matchId = input.matchId ? requireString(input.matchId, 'Das Match', 40) : null
+  let match: any = null
+  if (matchId) {
+    const found = (await sql`
+      SELECT m.id, m.week_id, m.home_id, m.away_id, m.home_seed, m.away_seed, m.course_id,
+             w.starts_at
+      FROM matches m JOIN weeks w ON w.id = m.week_id
+      WHERE m.id = ${matchId} AND m.season_id = ${season.id}
+    `) as any[]
+    if (!found[0]) throw new HttpError(404, 'Dieses Match gibt es nicht.')
+    match = found[0]
+  }
+
+  const weekId = match ? String(match.week_id) : requireString(input.weekId, 'Die Woche', 40)
   const weeks = (await sql`
     SELECT id, number, starts_at, course_id, picker_id FROM weeks
     WHERE id = ${weekId} AND season_id = ${season.id}
@@ -72,7 +90,19 @@ async function create(req: VercelRequest, res: VercelResponse) {
   const week = weeks[0]
 
   const isAdmin = user.role === 'admin'
-  if (!isAdmin) {
+
+  if (match) {
+    const picker =
+      match.home_seed !== null && match.away_seed !== null && match.away_seed < match.home_seed
+        ? match.away_id
+        : match.home_id
+    if (!isAdmin && user.id !== picker) {
+      throw new HttpError(403, 'Den Kurs wählt der höher gesetzte Spieler.')
+    }
+    if (match.course_id && !isAdmin) {
+      throw new HttpError(409, 'Für dieses Match steht der Kurs schon fest.')
+    }
+  } else if (!isAdmin) {
     if (week.picker_id !== user.id) throw new HttpError(403, 'Diese Woche gehört jemand anderem.')
     const deadline = new Date(
       new Date(week.starts_at).getTime() - settings.coursePickLeadDays * 86400_000,
@@ -84,7 +114,9 @@ async function create(req: VercelRequest, res: VercelResponse) {
       )
     }
   }
-  if (week.course_id && !isAdmin) {
+  // In einer Playoff-Woche gibt es mehrere Kurse, darum gilt das nur für die
+  // Grundsaison.
+  if (!match && week.course_id && !isAdmin) {
     throw new HttpError(409, 'Für diese Woche steht der Kurs schon fest.')
   }
 
@@ -143,7 +175,14 @@ async function create(req: VercelRequest, res: VercelResponse) {
     ) AS t(n, p, si, len)
   `
 
-  await sql`UPDATE weeks SET course_id = ${courseId} WHERE id = ${weekId}`
+  if (match) {
+    await sql`UPDATE matches SET course_id = ${courseId} WHERE id = ${match.id}`
+    // Die Woche bekommt denselben Kurs, solange sie noch keinen hat — damit die
+    // Wochenansicht etwas anzeigen kann.
+    await sql`UPDATE weeks SET course_id = ${courseId} WHERE id = ${weekId} AND course_id IS NULL`
+  } else {
+    await sql`UPDATE weeks SET course_id = ${courseId} WHERE id = ${weekId}`
+  }
 
   json(res, 201, { id: courseId, par })
 }

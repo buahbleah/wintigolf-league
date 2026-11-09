@@ -347,3 +347,8 @@ ALTER TABLE slots ADD COLUMN IF NOT EXISTS duration_manual boolean NOT NULL DEFA
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS dedupe_key text;
 CREATE UNIQUE INDEX IF NOT EXISTS notifications_dedupe_key ON notifications (dedupe_key)
   WHERE dedupe_key IS NOT NULL;
+
+-- Im Playoff wählt der höher gesetzte Spieler den Kurs — also hängt der Kurs am
+-- Match und nicht an der Woche: in derselben Runde können zwei Paarungen auf
+-- verschiedenen Plätzen spielen.
+ALTER TABLE matches ADD COLUMN IF NOT EXISTS course_id uuid REFERENCES courses(id) ON DELETE SET NULL;

@@ -141,6 +141,36 @@ async function create(req: VercelRequest, res: VercelResponse) {
     ) AS t(n, s, e)
   `
 
+  /**
+   * Wer in der letzten Saison dabei war, startet mit dem Indoor-Handicap, das
+   * er sich dort erspielt hat — nicht wieder mit der halbierten Schätzung. Nach
+   * zehn Runden weiss die Liga besser, wie jemand indoor spielt, als es jedes
+   * Platzhandicap sagen könnte.
+   */
+  const previous = (await sql`
+    SELECT sp.user_id, sp.indoor_handicap
+    FROM season_players sp
+    JOIN seasons s ON s.id = sp.season_id
+    WHERE s.status IN ('finished','archived') AND sp.indoor_handicap IS NOT NULL
+      AND sp.status = 'active'
+    ORDER BY s.updated_at DESC
+  `) as any[]
+
+  const carried = new Map<string, number>()
+  for (const row of previous) {
+    if (!carried.has(row.user_id)) carried.set(row.user_id, Number(row.indoor_handicap))
+  }
+
+  if (carried.size) {
+    const ids = [...carried.keys()]
+    await sql`
+      INSERT INTO season_players (season_id, user_id, starting_handicap, indoor_handicap)
+      SELECT ${seasonId}, uid::uuid, hcp, hcp
+      FROM unnest(${ids}::text[], ${ids.map((id) => carried.get(id)!)}::numeric[]) AS t(uid, hcp)
+      ON CONFLICT (season_id, user_id) DO NOTHING
+    `
+  }
+
   // Der Admin spielt mit, sonst stünde er als Einziger nicht in der Tabelle.
   const starting =
     admin.outdoorHandicap === null

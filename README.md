@@ -23,6 +23,7 @@ besten in einem schmalen Fenster anschauen.
 | `npm run build` | Produktionsbuild nach `dist/` |
 | `npm run db:apply` | Schema aus `db/schema.sql` einspielen (idempotent) |
 | `node scripts/seed-demo.mjs` | Testsaison mit zwei Konten anlegen (nur Entwicklung) |
+| `node scripts/seed-playoffs.mjs --force` | Fertige Grundsaison mit vier Spielern, um Playoffs zu testen |
 | `npm test` | Tests |
 | `npm run typecheck` | TypeScript prüfen |
 
@@ -54,6 +55,13 @@ api/            Vercel-Funktionen
   weeks/        Kurszuteilung pro Woche
   courses/      Kurs eintragen, Kurssuche mit Cache und Tagesbudget
   rounds/       Karte anfangen, eintragen, Beleg, abgeben, bestätigen
+  standings/    Tabelle und Power Rankings
+  playoffs/     Bracket setzen und ansehen
+  matches/      Stechen, kampflos, Admin-Entscheid
+  slots/        Termine am Simulator
+  topics/       Clubhaus
+  notifications/ Glocke
+  cron/         Erinnerung vor der Deadline
 db/schema.sql   das ganze Schema
 dev/            lässt die API im Vite-Dev-Server laufen
 src/
@@ -79,16 +87,17 @@ des Absenderrufs. `MAIL_IN_DEV=1` hebt das auf.
 
 ## Stand
 
-Etappe 1 bis 5 stehen:
+Etappe 1 bis 6 stehen:
 
 1. Gerüst, Registrierung mit Liga-Code, Anmelden, Passwort zurücksetzen, Profil
 2. Saison mit allen Einstellungen, Wochen, Kurszuteilung, Kurseingabe
 3. Score Loch für Loch, Beleg-Foto, Zähler, Bestätigen und Ablehnen
 4. Tabelle mit Streichresultaten, Handicap-Motor, Power Rankings, Spielerseite
 5. Terminplaner, Clubhaus, Mitteilungen, Abzeichen, Deadline-Erinnerung
+6. Playoffs im Matchplay, Siegerseite, Handicap-Übernahme in die nächste Saison
 
-Als Nächstes kommt Etappe 6 — Playoffs, Siegerseite und Archiv. Der Etappenplan
-steht am Ende von [SPEC.md](SPEC.md).
+Offen ist Etappe 7 — Design-Feinschliff und Deployment. Der Etappenplan steht am
+Ende von [SPEC.md](SPEC.md).
 
 ### Wie das Handicap gerechnet wird
 

@@ -13,6 +13,7 @@ import { Power } from '@/screens/Power'
 import { Termine } from '@/screens/Termine'
 import { Clubhaus, Thema } from '@/screens/Clubhaus'
 import { Mitteilungen } from '@/screens/Mitteilungen'
+import { Playoffs } from '@/screens/Playoffs'
 import { SeasonSetup } from '@/screens/admin/SeasonSetup'
 import { SettingsScreen } from '@/screens/admin/SettingsScreen'
 import { WeeksScreen } from '@/screens/admin/WeeksScreen'
@@ -93,6 +94,16 @@ export default function App() {
   function renderScreen() {
     if (screen === 'profil') return <Profile />
 
+    if (screen === 'kurs' && segments[1] === 'match' && segments[2]) {
+      return (
+        <CourseEntry
+          matchId={segments[2]}
+          data={league.data ?? { season: null, weeks: [], players: [] }}
+          onSaved={league.reload}
+        />
+      )
+    }
+
     if (screen === 'kurs' && segments[1]) {
       return <CourseEntry weekId={segments[1]} data={league.data ?? { season: null, weeks: [], players: [] }} onSaved={league.reload} />
     }
@@ -124,6 +135,9 @@ export default function App() {
     }
     if (screen === 'spieler' && segments[1]) {
       return <Player playerId={segments[1]} />
+    }
+    if (screen === 'playoffs') {
+      return <Playoffs />
     }
     if (screen === 'power') {
       return <Power />

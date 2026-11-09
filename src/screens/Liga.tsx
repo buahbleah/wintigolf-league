@@ -99,6 +99,17 @@ export function Liga({ data, loading }: { data: LeagueData | null; loading: bool
         </div>
       )}
 
+      {(season.status === 'playoffs' || season.status === 'finished') && (
+        <button className="card week-teaser card--accent" onClick={() => navigate('/playoffs')}>
+          <span className="week-no">🏆</span>
+          <span className="stack stack--tight" style={{ flex: 1, gap: 2, textAlign: 'left' }}>
+            <strong>{season.status === 'finished' ? 'Die Saison ist entschieden' : 'Die Playoffs laufen'}</strong>
+            <span className="muted small">Bracket und Matchplay ansehen</span>
+          </span>
+          <span className="chip chip--green">Playoffs</span>
+        </button>
+      )}
+
       {current && (
         <button className="card week-teaser" onClick={() => navigate('/woche')}>
           <span className="week-no">{current.number}</span>

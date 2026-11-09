@@ -51,11 +51,28 @@ async function start(req: VercelRequest, res: VercelResponse) {
 
   const weekId = requireString(body(req).weekId, 'Die Woche', 40)
   const weeks = (await sql`
-    SELECT id, number, course_id, starts_at, ends_at, status FROM weeks
+    SELECT id, number, kind, course_id, starts_at, ends_at, status FROM weeks
     WHERE id = ${weekId} AND season_id = ${season.id}
   `) as any[]
   if (!weeks[0]) throw new HttpError(404, 'Diese Woche gibt es nicht.')
   const week = weeks[0]
+
+  /**
+   * In einer Playoff-Woche gilt der Kurs des eigenen Matches, nicht der der
+   * Woche: zwei Paarungen können auf verschiedenen Plätzen spielen.
+   */
+  if (week.kind === 'playoff') {
+    const matches = (await sql`
+      SELECT course_id FROM matches
+      WHERE week_id = ${weekId} AND (home_id = ${user.id} OR away_id = ${user.id})
+      LIMIT 1
+    `) as any[]
+    if (!matches[0]) throw new HttpError(403, 'In dieser Playoff-Runde spielst du nicht mit.')
+    if (!matches[0].course_id) {
+      throw new HttpError(400, 'Für dein Match steht der Kurs noch nicht fest.')
+    }
+    week.course_id = matches[0].course_id
+  }
 
   if (!week.course_id) throw new HttpError(400, 'Für diese Woche steht der Kurs noch nicht fest.')
 

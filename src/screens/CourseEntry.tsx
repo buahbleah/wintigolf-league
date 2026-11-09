@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError } from '@/net/api'
 import { navigate } from '@/state/router'
 import { defaultHoles, type ExternalCourse, type SearchHit } from '@/core/externalCourse'
@@ -21,8 +21,45 @@ interface HoleRow {
  * Gespeichert wird erst, wenn die Karte in sich stimmt: achtzehn Löcher, jeder
  * Stroke-Index genau einmal, Länge in der erlaubten Spanne, ein echtes Rating.
  */
-export function CourseEntry({ weekId, data, onSaved }: { weekId: string; data: LeagueData; onSaved: () => void }) {
-  const week = data.weeks.find((w) => w.id === weekId)
+export function CourseEntry({
+  weekId,
+  matchId,
+  data,
+  onSaved,
+}: {
+  weekId?: string
+  /** Im Playoff hängt der Kurs am Match, nicht an der Woche. */
+  matchId?: string
+  data: LeagueData
+  onSaved: () => void
+}) {
+  const [matchWeekId, setMatchWeekId] = useState<string | null>(null)
+  const [opponent, setOpponent] = useState<string | null>(null)
+
+  /* Beim Playoff-Kurs steht die Woche im Match — also einmal nachschauen. */
+  useEffect(() => {
+    if (!matchId) return
+    let cancelled = false
+    void api
+      .get<{ matches: { id: string; weekId: string; home: any; away: any; pickerId: string }[] }>(
+        '/api/playoffs',
+      )
+      .then((res) => {
+        if (cancelled) return
+        const match = res.matches.find((m) => m.id === matchId)
+        if (!match) return
+        setMatchWeekId(match.weekId)
+        const other = match.pickerId === match.home?.id ? match.away : match.home
+        setOpponent(other?.name ?? null)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [matchId])
+
+  const effectiveWeekId = weekId ?? matchWeekId
+  const week = data.weeks.find((w) => w.id === effectiveWeekId)
   const settings = data.season?.settings
 
   const [name, setName] = useState(week?.course?.name ?? '')
@@ -130,7 +167,8 @@ export function CourseEntry({ weekId, data, onSaved }: { weekId: string; data: L
     setError(null)
     try {
       await api.post('/api/courses', {
-        weekId,
+        weekId: matchId ? undefined : effectiveWeekId,
+        matchId,
         name,
         tee,
         courseRating: rating,
@@ -145,7 +183,7 @@ export function CourseEntry({ weekId, data, onSaved }: { weekId: string; data: L
         })),
       })
       onSaved()
-      navigate('/')
+      navigate(matchId ? '/playoffs' : '/')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.')
     } finally {
@@ -164,7 +202,10 @@ export function CourseEntry({ weekId, data, onSaved }: { weekId: string; data: L
   return (
     <div className="page">
       <div className="page-head">
-        <span className="eyebrow">Woche {week.number}</span>
+        <span className="eyebrow">
+          Woche {week.number}
+          {opponent ? ' · gegen ' + opponent : ''}
+        </span>
         <h1>Kurs eintragen</h1>
         <p className="lede">
           {formatRange(zurichIsoDate(new Date(week.startsAt)), zurichIsoDate(new Date(week.endsAt)))}

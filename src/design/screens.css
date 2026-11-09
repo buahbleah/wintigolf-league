@@ -896,3 +896,118 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* --------------------------------------------------------- Playoffs */
+
+.match {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.match:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.match-side {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.match-player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  text-align: left;
+}
+
+.match-player .avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+}
+
+.match-name {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Die Setzliste steht klein vor dem Namen — wie auf einem Turnierplan. */
+.seed {
+  color: var(--ink-faint);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-player.is-winner .match-name {
+  color: var(--green);
+}
+
+.match-player.is-empty {
+  opacity: 0.5;
+}
+
+.match-vs {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.match-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------- Sieger */
+
+.champion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  background: linear-gradient(180deg, var(--green-wash), transparent 70%), var(--surface);
+  border: 1px solid var(--green-edge);
+  border-radius: var(--radius-lg);
+}
+
+.champion-label {
+  color: var(--green);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.champion-name {
+  color: var(--ink-strong);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}

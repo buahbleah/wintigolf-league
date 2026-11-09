@@ -6,6 +6,7 @@ import { loadRound, roundPayload } from '../../_lib/rounds.js'
 import { notify } from '../../_lib/notify.js'
 import { recomputeHandicap } from '../../_lib/handicap.js'
 import { awardForRound } from '../../_lib/badges.js'
+import { advanceBracket } from '../../_lib/playoffs.js'
 import { seasonById } from '../../_lib/season.js'
 
 /**
@@ -84,6 +85,8 @@ export default handler(['POST'], async (req: VercelRequest, res: VercelResponse)
   const season = await seasonById(loaded.row.season_id)
   const moved = await recomputeHandicap(season, loaded.row.user_id)
   await awardForRound(season.id, loaded.row.user_id, roundId, loaded.result)
+  // Im Playoff kann diese Bestätigung ein Match entschieden haben.
+  await advanceBracket(season)
 
   const movement =
     moved.before !== null && moved.after !== null && moved.before !== moved.after
