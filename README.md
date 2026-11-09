@@ -22,6 +22,7 @@ besten in einem schmalen Fenster anschauen.
 | `npm run dev` | Dev-Server, inklusive der API aus `api/` |
 | `npm run build` | Produktionsbuild nach `dist/` |
 | `npm run db:apply` | Schema aus `db/schema.sql` einspielen (idempotent) |
+| `node scripts/seed-demo.mjs` | Testsaison mit zwei Konten anlegen (nur Entwicklung) |
 | `npm test` | Tests |
 | `npm run typecheck` | TypeScript prüfen |
 
@@ -35,7 +36,12 @@ Projekt-Variablen. `.env.example` zeigt, welche es gibt.
 | `DATABASE_URL` | Neon-Postgres, Datenbank `wintigolf` |
 | `BREVO_API_KEY` | Mails: Einladung, Reminder, Bestätigungen, Passwort |
 | `GOLF_COURSE_API_KEY` | Course Rating und Slope, wenn GSPro sie nicht hergibt |
-| `BLOB_READ_WRITE_TOKEN` | Screenshots in Vercel Blob (setzt Vercel selber) |
+| `MAIL_IN_DEV` | Auf `1` setzen, wenn lokal wirklich Mails rausgehen sollen |
+
+Die Belege (Fotos der Abschlussbildschirme) liegen in der Datenbank, nicht in
+einem öffentlichen Speicher: so braucht die App keinen weiteren Dienst, und ein
+Beleg ist nur mit angemeldeter Sitzung zu sehen statt über eine Adresse, die man
+weitergeben kann.
 
 ## Wie der Code liegt
 
@@ -44,6 +50,10 @@ api/            Vercel-Funktionen
   _lib/         Datenbank, Sitzungen, Passwörter, Mails, Request-Hilfen
   auth/         registrieren, anmelden, abmelden, me, Passwort zurücksetzen
   profile/      eigenes Profil ändern
+  seasons/      Saison anlegen und verwalten, Wochen, Spieler
+  weeks/        Kurszuteilung pro Woche
+  courses/      Kurs eintragen, Kurssuche mit Cache und Tagesbudget
+  rounds/       Karte anfangen, eintragen, Beleg, abgeben, bestätigen
 db/schema.sql   das ganze Schema
 dev/            lässt die API im Vite-Dev-Server laufen
 src/
@@ -61,9 +71,19 @@ Das **allererste Konto** braucht keinen Liga-Code und wird automatisch Admin —
 zu diesem Zeitpunkt gibt es noch keine Saison, die einen Code ausgeben könnte.
 Jedes weitere Konto kommt nur mit gültigem Liga-Code hinein.
 
+## Mails
+
+Lokal wird **nichts** verschickt, sondern nur protokolliert — beim Ausprobieren
+entstehen Testkonten, und jede Mail dorthin wäre eine Unzustellbarkeit auf Kosten
+des Absenderrufs. `MAIL_IN_DEV=1` hebt das auf.
+
 ## Stand
 
-Etappe 1 steht: Gerüst, Registrierung mit Liga-Code, Anmelden, Passwort
-zurücksetzen, Profil mit Handicap und Schlägerdistanzen. Als Nächstes kommt
-Etappe 2 — Saison, Wochen, Kurswahl und Kursdaten. Der Etappenplan steht am Ende
-von [SPEC.md](SPEC.md).
+Etappe 1 bis 3 stehen:
+
+1. Gerüst, Registrierung mit Liga-Code, Anmelden, Passwort zurücksetzen, Profil
+2. Saison mit allen Einstellungen, Wochen, Kurszuteilung, Kurseingabe
+3. Score Loch für Loch, Beleg-Foto, Zähler, Bestätigen und Ablehnen
+
+Als Nächstes kommt Etappe 4 — Tabelle, Handicap-Motor und Power Rankings. Der
+Etappenplan steht am Ende von [SPEC.md](SPEC.md).

@@ -62,12 +62,22 @@ export interface LeagueData {
   players: LeaguePlayer[]
 }
 
-export function useLeague() {
+/**
+ * `userId` ist nicht nur Deko: meldet sich jemand an oder ab, ändert sich, was
+ * der Server zeigt — ohne diese Abhängigkeit stünde nach dem Anmelden weiterhin
+ * «noch keine Saison» auf dem Schirm, weil die Daten von vorher stammen.
+ */
+export function useLeague(userId: string | null) {
   const [data, setData] = useState<LeagueData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    if (!userId) {
+      setData(null)
+      setLoading(false)
+      return
+    }
     try {
       const res = await api.get<LeagueData>('/api/seasons')
       setData({ season: res.season, weeks: res.weeks ?? [], players: res.players ?? [] })
@@ -77,9 +87,10 @@ export function useLeague() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userId])
 
   useEffect(() => {
+    setLoading(true)
     void load()
   }, [load])
 

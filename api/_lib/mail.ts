@@ -33,6 +33,18 @@ export async function sendMail(mail: Mail): Promise<boolean> {
     return false
   }
 
+  /**
+   * Auf dem Entwicklungsrechner wird nichts verschickt.
+   *
+   * Beim Ausprobieren entstehen Konten wie test@example.com, und jede Mail
+   * dorthin ist eine Unzustellbarkeit, die auf den Ruf des Absenders geht.
+   * `MAIL_IN_DEV=1` hebt das auf, wenn man den Versand wirklich prüfen will.
+   */
+  if (!process.env.VERCEL && process.env.MAIL_IN_DEV !== '1') {
+    console.info(`[Mail nur lokal protokolliert] An ${mail.to}: ${mail.subject}`)
+    return false
+  }
+
   if (mail.dedupeKey) {
     const already = (await sql`SELECT 1 FROM mail_log WHERE dedupe_key = ${mail.dedupeKey}`) as any[]
     if (already.length) return false

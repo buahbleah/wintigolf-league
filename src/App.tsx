@@ -5,6 +5,9 @@ import { Welcome } from '@/screens/Welcome'
 import { Liga } from '@/screens/Liga'
 import { Profile, initials } from '@/screens/Profile'
 import { CourseEntry } from '@/screens/CourseEntry'
+import { Week } from '@/screens/Week'
+import { ScoreEntry } from '@/screens/ScoreEntry'
+import { Card } from '@/screens/Card'
 import { SeasonSetup } from '@/screens/admin/SeasonSetup'
 import { SettingsScreen } from '@/screens/admin/SettingsScreen'
 import { WeeksScreen } from '@/screens/admin/WeeksScreen'
@@ -19,7 +22,7 @@ import { IconBell, IconCalendar, IconCard, IconChat, IconFlag, IconUser } from '
  */
 export default function App() {
   const { state, loading } = useSession()
-  const league = useLeague()
+  const league = useLeague(state.user?.id ?? null)
   const { path, segments } = useRoute()
 
   if (loading) {
@@ -101,8 +104,18 @@ export default function App() {
       return <AdminHome />
     }
 
+    const empty = { season: null, weeks: [], players: [] }
+
     if (screen === 'woche') {
-      return <Soon title="Die Woche" text="Score eintragen, Screenshot hochladen, bestätigen lassen." />
+      if (league.loading && !league.data) return <Loading />
+      return <Week data={league.data ?? empty} />
+    }
+    if (screen === 'runde' && segments[1]) {
+      if (league.loading && !league.data) return <Loading />
+      return <ScoreEntry weekId={segments[1]} data={league.data ?? empty} />
+    }
+    if (screen === 'karte' && segments[1]) {
+      return <Card roundId={segments[1]} />
     }
     if (screen === 'termine') {
       return <Soon title="Termine" text="Termin ausschreiben, zusagen, Flight steht." />
@@ -114,7 +127,7 @@ export default function App() {
       return <Soon title="Mitteilungen" text="Zusagen, Bestätigungen, Antworten." />
     }
 
-    return <Liga data={league.data} loading={league.loading} />
+    return <Liga data={league.data} loading={league.loading && !league.data} />
   }
 }
 
@@ -157,6 +170,14 @@ function Tab({
       {icon}
       {label}
     </a>
+  )
+}
+
+function Loading() {
+  return (
+    <div className="page center">
+      <span className="spinner" style={{ margin: '0 auto' }} />
+    </div>
   )
 }
 

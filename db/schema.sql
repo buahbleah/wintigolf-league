@@ -313,3 +313,23 @@ CREATE TABLE IF NOT EXISTS course_api_budget (
   day date PRIMARY KEY,
   calls int NOT NULL DEFAULT 0
 );
+
+-- ----------------------------------------------------------- Screenshots
+-- Der Beleg zu einer Runde: das abfotografierte Abschlussbild aus GSPro.
+--
+-- Die Bilder liegen in der Datenbank und nicht in einem öffentlichen Speicher,
+-- und zwar aus zwei Gründen: so hängt kein weiterer Dienst an der App, und ein
+-- Beleg ist nur mit angemeldeter Sitzung zu sehen, nicht über eine Adresse, die
+-- man weitergeben kann. Auf dem Gerät wird vorher verkleinert, ein Bild wiegt
+-- also ein paar hundert Kilobyte.
+
+CREATE TABLE IF NOT EXISTS screenshots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id uuid NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
+  mime text NOT NULL DEFAULT 'image/jpeg',
+  bytes bytea NOT NULL,
+  byte_size int NOT NULL,
+  uploaded_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS screenshots_round_idx ON screenshots (round_id);
