@@ -41,6 +41,7 @@ Projekt-Variablen. `.env.example` zeigt, welche es gibt.
 | `DATABASE_URL` | Neon-Postgres, Datenbank `wintigolf` |
 | `BREVO_API_KEY` | Mails: Einladung, Reminder, Bestätigungen, Passwort |
 | `GOLF_COURSE_API_KEY` | Course Rating und Slope, wenn GSPro sie nicht hergibt |
+| `ANTHROPIC_API_KEY` | Scorecards aus dem Bild lesen — Par und Stroke-Index je Loch |
 | `MAIL_IN_DEV` | Auf `1` setzen, wenn lokal wirklich Mails rausgehen sollen |
 
 Die Belege (Fotos der Abschlussbildschirme) liegen in der Datenbank, nicht in
@@ -57,7 +58,7 @@ api/            Vercel-Funktionen
   profile/      eigenes Profil ändern
   seasons/      Saison anlegen und verwalten, Wochen, Spieler
   weeks/        Kurszuteilung pro Woche
-  courses/      Kurs eintragen, Kurssuche mit Cache und Tagesbudget
+  courses/      Kurs eintragen, GSPro-Kursliste, Scorecard auslesen, Kurssuche
   rounds/       Karte anfangen, eintragen, Beleg, abgeben, bestätigen
   standings/    Tabelle und Power Rankings
   playoffs/     Bracket setzen und ansehen
@@ -137,3 +138,29 @@ das steht in der Runde selbst.
 
 `POST /api/admin/recompute` ist derselbe Lauf für alle, von Hand ausgelöst (in
 der App unter Einstellungen).
+
+### Wie ein Kurs in die Woche kommt
+
+Wer die Woche wählt, sucht den Platz in der Kursliste des [Simulator Golf
+Tour](https://simulatorgolftour.com/courses) — dort stehen die Plätze, die es in
+GSPro wirklich gibt. Ein Klick, und aus der Scorecard des Kurses kommen Par und
+Stroke-Index für alle achtzehn Löcher, dazu Rating, Slope und Länge pro Tee.
+
+Der Stroke-Index ist der Grund für diesen Umweg: keine Kursdatenbank gibt ihn
+her, und er entscheidet, auf welche Löcher die Vorgabeschläge fallen. Auf der
+Scorecard steht er — also wird sie gelesen.
+
+Dabei bleibt dreierlei bewusst so:
+
+- **Die Liste liegt bei uns**, einen Tag lang. Die Suche klopft nicht bei jedem
+  Tastendruck an einem fremden Server an, und fällt der aus, zeigt die App die
+  Liste von gestern statt gar keine.
+- **Jede Karte wird einmal gelesen.** Das Ergebnis liegt in der Datenbank; wer in
+  Woche sieben denselben Kurs wählt, bekommt ihn sofort.
+- **Geprüft wird, bevor etwas ankommt.** Achtzehn Löcher, Par zwischen 3 und 6,
+  jeder Stroke-Index genau einmal — was daran scheitert, wird abgewiesen statt
+  als «wahrscheinlich richtig» durchgereicht. Und alles landet im Formular, nicht
+  in der Datenbank: jede Zahl ist sichtbar und änderbar, bevor gespeichert wird.
+
+Steht ein Platz nicht in der Liste, geht es weiterhin über ein Bild der
+Scorecard — als Adresse oder als Foto — oder ganz von Hand.

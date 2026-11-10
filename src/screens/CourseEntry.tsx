@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, ApiError } from '@/net/api'
 import { navigate } from '@/state/router'
 import { defaultHoles, type ExternalCourse, type SearchHit } from '@/core/externalCourse'
+import type { ReadCard, ReadTee } from '@/core/scorecard'
+import type { SgtCourse } from '@/core/sgtCourses'
 import { formatRange, zurichIsoDate } from '@/core/dates'
 import type { LeagueData } from '@/state/league'
 
@@ -74,6 +76,19 @@ export function CourseEntry({
     defaultHoles().map((h) => ({ par: String(h.par), strokeIndex: String(h.strokeIndex), lengthM: '' })),
   )
 
+  const [cardUrl, setCardUrl] = useState('')
+  const [reading, setReading] = useState(false)
+  const [read, setRead] = useState<string | null>(null)
+  const cardInput = useRef<HTMLInputElement>(null)
+
+  /* Der gewählte GSPro-Kurs und die Tees seiner Karte — damit sich der gespielte
+     Tee nach dem Auslesen noch wechseln lässt, ohne alles neu zu holen. */
+  const [sgtQuery, setSgtQuery] = useState('')
+  const [sgtHits, setSgtHits] = useState<SgtCourse[] | null>(null)
+  const [picked, setPicked] = useState<SgtCourse | null>(null)
+  const [cardTees, setCardTees] = useState<ReadTee[]>([])
+  const [cardFrom, setCardFrom] = useState<'sgt' | 'image' | null>(null)
+
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<SearchHit[] | null>(null)
   const [found, setFound] = useState<ExternalCourse | null>(null)
@@ -109,6 +124,130 @@ export function CourseEntry({
 
   function setHole(index: number, patch: Partial<HoleRow>) {
     setHoles((prev) => prev.map((h, i) => (i === index ? { ...h, ...patch } : h)))
+  }
+
+  /**
+   * Eine ausgelesene Karte ins Formular übernehmen.
+   *
+   * Sie landet im Formular, nicht in der Datenbank. Jede Zahl steht danach in
+   * einer Zeile, die sich ändern lässt, und erst der Knopf unten speichert.
+   */
+  function applyCard(card: ReadCard, courseName?: string) {
+    /* Ein gewählter Kurs bringt seinen Namen mit und setzt ihn durch. Aus einem
+       Bild gelesen gilt er nur, solange im Feld noch nichts steht. */
+    setHoles(
+      card.holes.map((hole) => ({
+        par: String(hole.par),
+        strokeIndex: String(hole.strokeIndex),
+        lengthM: hole.lengthM === null ? '' : String(hole.lengthM),
+      })),
+    )
+    setCardTees(card.tees)
+
+    if (courseName) setName(courseName)
+    else if (!name.trim() && card.courseName) setName(card.courseName)
+
+    /* Vorgeschlagen wird der Tee, der zum eingetragenen passt — sonst der
+       längste, weil der meistens der gespielte ist. Umstellen geht gleich
+       darunter. */
+    const match =
+      card.tees.find((t) => t.name.toLowerCase() === tee.trim().toLowerCase()) ??
+      [...card.tees].sort((a, b) => (b.lengthM ?? 0) - (a.lengthM ?? 0))[0]
+
+    const taken = ['Par und Stroke-Index für achtzehn Löcher']
+    if (match) taken.push(...applyReadTee(match))
+
+    setRead(
+      `Übernommen: ${taken.join(', ')}${match ? ` — Tee ${match.name}` : ''}. Schau die Zahlen durch, bevor du speicherst.`,
+    )
+  }
+
+  /** Einen Tee der Karte übernehmen. Gibt zurück, was dabei wirklich ankam. */
+  function applyReadTee(picked: ReadTee): string[] {
+    const taken: string[] = []
+    if (picked.name) setTee(picked.name)
+    if (picked.courseRating !== null) {
+      setRating(String(picked.courseRating))
+      taken.push('Course Rating')
+    }
+    if (picked.slopeRating !== null) {
+      setSlope(String(picked.slopeRating))
+      taken.push('Slope')
+    }
+    if (picked.lengthM !== null) {
+      setLength(String(picked.lengthM))
+      taken.push('Länge')
+    }
+    setSource('gspro')
+    return taken
+  }
+
+  /** Die Scorecard aus einem Bild lesen. */
+  async function readCard(payload: { imageUrl?: string; image?: string }) {
+    setReading(true)
+    setError(null)
+    setRead(null)
+    try {
+      const card = await api.post<ReadCard>('/api/courses/scorecard', payload)
+      setCardFrom('image')
+      setPicked(null)
+      applyCard(card)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Das Bild konnte nicht gelesen werden.')
+    } finally {
+      setReading(false)
+    }
+  }
+
+  /** In der GSPro-Liste suchen. */
+  async function searchSgt() {
+    setSearching(true)
+    setError(null)
+    try {
+      const res = await api.get<{ results: SgtCourse[] }>(
+        `/api/courses/sgt?q=${encodeURIComponent(sgtQuery.trim())}`,
+      )
+      setSgtHits(res.results)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Die Kursliste war nicht erreichbar.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  /**
+   * Einen Kurs aus der Liste festlegen: der Server holt dessen Scorecard und
+   * liest sie aus. Beim zweiten Mal ist derselbe Kurs sofort da.
+   */
+  async function pickSgt(course: SgtCourse) {
+    setReading(true)
+    setError(null)
+    setRead(null)
+    try {
+      const res = await api.get<{ course: SgtCourse; card: ReadCard }>(
+        `/api/courses/sgt?id=${course.id}`,
+      )
+      setPicked(res.course)
+      setCardFrom('sgt')
+      setSgtHits(null)
+      applyCard(res.card, res.course.name)
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : 'Die Scorecard dieses Kurses war nicht zu lesen.',
+      )
+    } finally {
+      setReading(false)
+    }
+  }
+
+  async function pickCard(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      await readCard({ image: await shrinkCard(file) })
+    } catch {
+      setError('Dieses Bild konnte nicht gelesen werden.')
+    }
   }
 
   async function search() {
@@ -160,6 +299,57 @@ export function CourseEntry({
       )
     }
     setSource('api')
+  }
+
+  /**
+   * Die Tees der gelesenen Karte zur Wahl stellen.
+   *
+   * Eine Scorecard zeigt vier oder fünf Tees, gespielt wird einer — und alle
+   * spielen denselben. Was oben vorgeschlagen wurde, ist nur der längste; hier
+   * steht, was es sonst gibt, mit Rating und Slope daneben.
+   */
+  /** Was nach dem Auslesen ankam — dort, wo es ausgelöst wurde. */
+  function cardResult() {
+    return (
+      <>
+        {read && <div className="notice notice--ok">{read}</div>}
+        {teeChoice()}
+      </>
+    )
+  }
+
+  function teeChoice() {
+    if (cardTees.length < 2) return null
+    return (
+      <div className="stack stack--tight">
+        <span className="muted small">Von welchem Tee wird gespielt?</span>
+        {cardTees.map((t) => {
+          const active = t.name.toLowerCase() === tee.trim().toLowerCase()
+          return (
+            <button
+              key={t.name}
+              className="list-item lookup-hit"
+              onClick={() => {
+                const taken = applyReadTee(t)
+                setRead(
+                  `Tee ${t.name}${taken.length ? ` übernommen: ${taken.join(', ')}` : ' übernommen'}.`,
+                )
+              }}
+            >
+              <span style={{ textAlign: 'left', flex: 1 }}>
+                <strong>{t.name}</strong>
+                <span className="muted small">
+                  {' '}
+                  {t.courseRating ?? '—'} / {t.slopeRating ?? '—'}
+                  {t.lengthM ? ` · ${t.lengthM} m` : ''}
+                </span>
+              </span>
+              {active && <span className="chip chip--green">gewählt</span>}
+            </button>
+          )
+        })}
+      </div>
+    )
   }
 
   async function save() {
@@ -220,10 +410,97 @@ export function CourseEntry({
         </div>
       )}
 
+      {/* ------------------------------------------------ Kurs aus GSPro wählen */}
+      <div className="card stack">
+        <div className="card-title">
+          <h3>Kurs aus GSPro wählen</h3>
+          <span className="chip chip--green">füllt alles aus</span>
+        </div>
+        <p className="muted small">
+          Such den Platz, der diese Woche gespielt wird. Aus seiner Scorecard kommen Par und
+          Stroke-Index für alle achtzehn Löcher, dazu Rating, Slope und Länge pro Tee. Danach
+          prüfst du die Zahlen hier im Formular.
+        </p>
+
+        <div className="row">
+          <input
+            value={sgtQuery}
+            onChange={(e) => setSgtQuery(e.target.value)}
+            placeholder="z. B. Goldenberg"
+            aria-label="Kurs in der GSPro-Liste suchen"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && sgtQuery.trim().length >= 3) void searchSgt()
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 48,
+              padding: '0 12px',
+              background: 'var(--surface-raised)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+            }}
+          />
+          <button
+            className="btn btn--ghost"
+            onClick={searchSgt}
+            disabled={searching || reading || sgtQuery.trim().length < 3}
+          >
+            {searching ? <span className="spinner" /> : 'Suchen'}
+          </button>
+        </div>
+
+        {sgtHits && sgtHits.length === 0 && (
+          <p className="muted small">
+            Kein Kurs dieses Namens. Probier einen Teil des Namens oder den Ort — und wenn er dort
+            nicht steht, lies die Scorecard weiter unten aus einem Bild.
+          </p>
+        )}
+
+        {sgtHits && sgtHits.length > 0 && (
+          <div className="list">
+            {sgtHits.map((hit) => (
+              <button
+                key={hit.id}
+                className="list-item lookup-hit"
+                onClick={() => pickSgt(hit)}
+                disabled={reading}
+              >
+                <span className="stack stack--tight" style={{ gap: 0, textAlign: 'left', flex: 1 }}>
+                  <strong>{hit.name}</strong>
+                  <span className="muted small">
+                    {hit.location || 'Ort unbekannt'}
+                    {hit.par ? ` · Par ${hit.par}` : ''}
+                    {hit.designer ? ` · ${hit.designer}` : ''}
+                  </span>
+                </span>
+                <span className="chip chip--green">wählen</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {reading && !sgtHits && (
+          <p className="muted small">
+            <span className="spinner" /> Die Scorecard wird gelesen — das dauert ein paar Sekunden.
+          </p>
+        )}
+
+        {picked && (
+          <div className="notice notice--ok">
+            <strong>{picked.name}</strong>
+            {picked.location ? ` · ${picked.location}` : ''}
+            {picked.designer ? ` · gebaut von ${picked.designer}` : ''}
+          </div>
+        )}
+
+        {cardFrom === 'sgt' && cardResult()}
+      </div>
+
       <div className="card stack">
         <div className="card-title">
           <h3>Kurs</h3>
-          <span className="chip">aus GSPro abtippen</span>
+          <span className="chip">prüfen und ändern</span>
         </div>
 
         <div className="field">
@@ -287,13 +564,64 @@ export function CourseEntry({
         </div>
       </div>
 
+      {/* ------------------------------------------------ Karte auslesen */}
       <div className="card stack">
         <div className="card-title">
-          <h3>Karte vorausfüllen</h3>
+          <h3>Oder eine Scorecard auslesen</h3>
+          <span className="chip">wenn der Kurs nicht in der Liste steht</span>
         </div>
         <p className="muted small">
-          GSPro-Kurse sind meist Nachbauten echter Plätze. Such den echten Kurs, übernimm Par und
-          Stroke-Index, und korrigier danach, was GSPro anders anzeigt.
+          Die Scorecard aus GSPro oder von einer Kursseite — als Bildadresse oder als Foto. Daraus
+          kommen dieselben Zahlen wie oben: Par und Stroke-Index für alle achtzehn Löcher, und wenn
+          Rating und Slope darauf stehen, die auch.
+        </p>
+
+        <div className="row">
+          <input
+            value={cardUrl}
+            onChange={(e) => setCardUrl(e.target.value)}
+            placeholder="https://… Bild der Scorecard"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && cardUrl.trim()) void readCard({ imageUrl: cardUrl.trim() })
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: 48,
+              padding: '0 12px',
+              background: 'var(--surface-raised)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+            }}
+          />
+          <button
+            className="btn btn--ghost"
+            onClick={() => readCard({ imageUrl: cardUrl.trim() })}
+            disabled={reading || !cardUrl.trim()}
+          >
+            {reading ? <span className="spinner" /> : 'Auslesen'}
+          </button>
+        </div>
+
+        <button
+          className="btn btn--ghost"
+          onClick={() => cardInput.current?.click()}
+          disabled={reading}
+        >
+          Foto der Scorecard
+        </button>
+        <input ref={cardInput} type="file" accept="image/*" hidden onChange={pickCard} />
+
+        {cardFrom === 'image' && cardResult()}
+      </div>
+
+      <div className="card stack">
+        <div className="card-title">
+          <h3>Oder in der Kursdatenbank suchen</h3>
+        </div>
+        <p className="muted small">
+          GSPro-Kurse sind meist Nachbauten echter Plätze. Die Datenbank kennt Rating, Slope und
+          Par — den Stroke-Index hat sie nicht, der steht nur auf der Scorecard.
         </p>
         <div className="row">
           <input
@@ -398,4 +726,32 @@ export function CourseEntry({
       </button>
     </div>
   )
+}
+
+/**
+ * Eine abfotografierte Scorecard verkleinern, bevor sie verschickt wird — aber
+ * nicht zu stark: die Ziffern in der INDEX-Spalte sind klein, und was hier
+ * verloren geht, lässt sich später nicht mehr lesen.
+ */
+function shrinkCard(file: File): Promise<string> {
+  return new Promise((done, failed) => {
+    const reader = new FileReader()
+    reader.onerror = () => failed(new Error('unlesbar'))
+    reader.onload = () => {
+      const image = new Image()
+      image.onerror = () => failed(new Error('kein Bild'))
+      image.onload = () => {
+        const scale = Math.min(1, 2000 / Math.max(image.width, image.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(image.width * scale)
+        canvas.height = Math.round(image.height * scale)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return failed(new Error('kein Canvas'))
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+        done(canvas.toDataURL('image/jpeg', 0.9))
+      }
+      image.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
 }

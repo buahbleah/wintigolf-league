@@ -11,7 +11,7 @@ Die App läuft: **https://wintigolf-league.vercel.app**
 | Region der Funktionen | `fra1`, Frankfurt, damit sie neben der Datenbank stehen |
 | Datenbank | Neon, Datenbank `wintigolf` im Projekt *fairway-games* |
 | Cron | `/api/cron/reminders`, täglich 18:00 Schweizer Zeit |
-| Variablen | `DATABASE_URL`, `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `GOLF_COURSE_API_KEY`, `GOLF_COURSE_API_DAILY_BUDGET` — gesetzt für Production und Preview |
+| Variablen | `DATABASE_URL`, `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `GOLF_COURSE_API_KEY`, `GOLF_COURSE_API_DAILY_BUDGET`, `ANTHROPIC_API_KEY` — gesetzt für Production und Preview |
 
 Alles davon steht in `vercel.json` oder in den Projekt-Variablen; im Dashboard
 muss nichts nachgestellt werden.
@@ -76,4 +76,5 @@ npm run db:apply
   lief vor der Variablen. Neu deployen.
 - **Mails kommen nicht an** — fast immer die IP-Sperre oben.
 - **Kurssuche sagt, sie sei nicht eingerichtet** — `GOLF_COURSE_API_KEY` fehlt.
+- **Das Auslesen sagt, es sei nicht eingerichtet** — `ANTHROPIC_API_KEY` fehlt.
   Rating und Slope lassen sich immer auch von Hand eintragen.
