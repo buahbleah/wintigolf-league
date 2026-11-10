@@ -6,9 +6,12 @@ import { sql } from './db.js'
  * Nur transaktionaler Versand: die Adresse kommt aus dem Konto, niemand landet
  * in einer Kontaktliste, und mit dem Newsletter des Gyms hat das nichts zu tun.
  *
- * Verschickt wird nur bei vier Anlässen — Einladung, Erinnerung vor der
- * Deadline, "eine Karte wartet auf dich", "deine Karte wurde abgelehnt" — plus
+ * Verschickt wird nur bei vier Anlässen: Erinnerung am Tag vor der Deadline,
+ * "eine Karte wartet auf deine Bestätigung", "deine Karte wurde abgelehnt",
  * Passwort zurücksetzen. Alles andere bleibt in der App.
+ *
+ * Eingeladen wird ohne Mail — der Admin gibt den Beitrittslink weiter, den die
+ * Ligaseite anzeigt. Wer die Liga kennt, kennt auch den Weg zu ihr.
  */
 
 const ENDPOINT = 'https://api.brevo.com/v3/smtp/email'
