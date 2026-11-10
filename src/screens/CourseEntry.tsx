@@ -89,6 +89,8 @@ export function CourseEntry({
   const [cardTees, setCardTees] = useState<ReadTee[]>([])
   const [cardFrom, setCardFrom] = useState<'sgt' | 'image' | null>(null)
   const [sgtSearching, setSgtSearching] = useState(false)
+  /* Woher das laufende Auslesen angestossen wurde — dort gehört der Hinweis hin. */
+  const [readingFrom, setReadingFrom] = useState<'sgt' | 'image' | null>(null)
 
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<SearchHit[] | null>(null)
@@ -186,6 +188,7 @@ export function CourseEntry({
   /** Die Scorecard aus einem Bild lesen. */
   async function readCard(payload: { imageUrl?: string; image?: string }) {
     setReading(true)
+    setReadingFrom('image')
     setError(null)
     setRead(null)
     try {
@@ -222,6 +225,7 @@ export function CourseEntry({
    */
   async function pickSgt(course: SgtCourse) {
     setReading(true)
+    setReadingFrom('sgt')
     setError(null)
     setRead(null)
     try {
@@ -481,9 +485,10 @@ export function CourseEntry({
           </div>
         )}
 
-        {reading && !sgtHits && (
+        {reading && readingFrom === 'sgt' && (
           <p className="muted small">
-            <span className="spinner" /> Die Scorecard wird gelesen — das dauert ein paar Sekunden.
+            <span className="spinner" /> Die Scorecard wird gelesen — das dauert eine halbe Minute.
+            Beim nächsten Mal ist derselbe Kurs sofort da.
           </p>
         )}
 

@@ -4,6 +4,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
+    "api/courses/sgt.ts": { "maxDuration": 60 },
+    "api/courses/scorecard.ts": { "maxDuration": 60 },
     "api/**/*.ts": { "maxDuration": 15 }
   },
   "regions": ["fra1"],
