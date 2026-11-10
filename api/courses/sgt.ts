@@ -30,6 +30,13 @@ const LIST_KEY = 'sgt:list'
 const LIST_TTL_DAYS = 1
 const CARD_TTL_DAYS = 365
 
+/**
+ * Steht im Schlüssel jeder gespeicherten Karte. Wird am Auslesen etwas besser
+ * gemacht, zählt diese Zahl eins hoch — und die alten Ergebnisse werden nicht
+ * mehr gefunden, statt noch ein Jahr lang ausgeliefert zu werden.
+ */
+const CARD_VERSION = 2
+
 export default handler(['GET'], async (req: VercelRequest, res: VercelResponse) => {
   await requireUser(req)
 
@@ -100,7 +107,7 @@ async function courseList(): Promise<SgtList> {
  * Sekunden und kostet nichts.
  */
 async function card(course: SgtCourse, list: SgtList): Promise<ReadCard> {
-  const key = `sgt:card:${course.id}`
+  const key = `sgt:card:v${CARD_VERSION}:${course.id}`
   const cached = (await sql`
     SELECT payload FROM course_api_cache
     WHERE key = ${key} AND fetched_at > now() - make_interval(days => ${CARD_TTL_DAYS})

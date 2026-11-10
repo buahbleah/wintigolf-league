@@ -45,8 +45,13 @@ const PROMPT = [
   'Handicap genannt — der Stroke-Index, 1 bis 18, jeder Wert genau einmal).',
   'Daneben steht pro Tee eine Spalte mit der Länge.',
   '',
-  'Gib ausserdem die Tees aus der Kopfzeile zurück, wenn dort Course Rating und',
-  'Slope stehen (oft als «69.8/121» geschrieben: Rating vor dem Schrägstrich).',
+  'Gib in `tees` jede Tee-Spalte zurück, die auf der Karte steht: ihren Namen',
+  '(White, Yellow, Gelb, Blau …), ihre Gesamtlänge aus der Zeile TOTAL und Course',
+  'Rating und Slope aus der Kopfzeile über den Tee-Namen — meist als «69.8/121»',
+  'geschrieben: Rating vor dem Schrägstrich, Slope dahinter.',
+  '',
+  'Steht für eine Spalte kein Rating da, lass das Feld weg, aber gib die Spalte',
+  'trotzdem zurück. Gibt es gar keine Tee-Spalten, gib eine leere Liste zurück.',
   '',
   'Sag in `unit`, ob die Längen in Yards oder Metern stehen (steht meist als',
   'IMPERIAL oder METRIC über der Tabelle).',
@@ -122,7 +127,10 @@ export async function readScorecard(image: ImageSource): Promise<ReadCard> {
                 },
               },
             },
-            required: ['holes', 'unit'],
+            /* `tees` muss angefordert werden, sonst lässt das Werkzeug die
+               Spalte einfach weg — und damit Rating und Slope, die genau dort
+               stehen und sonst nirgends. */
+            required: ['holes', 'unit', 'tees'],
             additionalProperties: false,
           },
         },
