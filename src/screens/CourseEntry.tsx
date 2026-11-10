@@ -88,6 +88,7 @@ export function CourseEntry({
   const [picked, setPicked] = useState<SgtCourse | null>(null)
   const [cardTees, setCardTees] = useState<ReadTee[]>([])
   const [cardFrom, setCardFrom] = useState<'sgt' | 'image' | null>(null)
+  const [sgtSearching, setSgtSearching] = useState(false)
 
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<SearchHit[] | null>(null)
@@ -201,7 +202,7 @@ export function CourseEntry({
 
   /** In der GSPro-Liste suchen. */
   async function searchSgt() {
-    setSearching(true)
+    setSgtSearching(true)
     setError(null)
     try {
       const res = await api.get<{ results: SgtCourse[] }>(
@@ -211,7 +212,7 @@ export function CourseEntry({
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Die Kursliste war nicht erreichbar.')
     } finally {
-      setSearching(false)
+      setSgtSearching(false)
     }
   }
 
@@ -444,9 +445,9 @@ export function CourseEntry({
           <button
             className="btn btn--ghost"
             onClick={searchSgt}
-            disabled={searching || reading || sgtQuery.trim().length < 3}
+            disabled={sgtSearching || reading || sgtQuery.trim().length < 3}
           >
-            {searching ? <span className="spinner" /> : 'Suchen'}
+            {sgtSearching ? <span className="spinner" /> : 'Suchen'}
           </button>
         </div>
 
