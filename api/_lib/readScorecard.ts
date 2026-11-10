@@ -103,11 +103,17 @@ export async function readScorecard(image: ImageSource): Promise<ReadCard> {
                   type: 'object',
                   properties: {
                     name: { type: 'string' },
-                    length: { type: 'integer', description: 'Gesamtlänge in der Einheit aus unit.' },
+                    length: {
+                      type: 'integer',
+                      description:
+                        'Gesamtlänge dieses Tees aus der Zeile TOTAL, in der Einheit aus unit. 0, wenn dort nichts Lesbares steht.',
+                    },
                     courseRating: { type: 'number' },
                     slopeRating: { type: 'integer' },
                   },
-                  required: ['name'],
+                  /* Was nicht angefordert wird, kommt nicht — darum steht die
+                     Länge hier, mit der 0 als ehrlichem «nicht lesbar». */
+                  required: ['name', 'length'],
                   additionalProperties: false,
                 },
               },
@@ -187,7 +193,8 @@ export async function readScorecard(image: ImageSource): Promise<ReadCard> {
     })),
     tees: (parsed.tees ?? []).map((tee) => ({
       name: tee.name,
-      lengthM: toMetres(tee.length, unit),
+      // Die 0 heisst «stand nicht lesbar auf der Karte» und wird wieder zu nichts.
+      lengthM: toMetres(tee.length && tee.length > 0 ? tee.length : null, unit),
       courseRating: tee.courseRating ?? null,
       slopeRating: tee.slopeRating ?? null,
     })),

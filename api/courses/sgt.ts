@@ -35,7 +35,7 @@ const CARD_TTL_DAYS = 365
  * gemacht, zählt diese Zahl eins hoch — und die alten Ergebnisse werden nicht
  * mehr gefunden, statt noch ein Jahr lang ausgeliefert zu werden.
  */
-const CARD_VERSION = 2
+const CARD_VERSION = 3
 
 export default handler(['GET'], async (req: VercelRequest, res: VercelResponse) => {
   await requireUser(req)
