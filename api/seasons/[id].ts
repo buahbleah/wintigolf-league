@@ -3,7 +3,14 @@ import { sql } from '../_lib/db.js'
 import { body, handler, HttpError, json, param, requireString } from '../_lib/http.js'
 import { requireAdmin } from '../_lib/auth.js'
 import { cleanSettings, seasonById, settingsOf } from '../_lib/season.js'
-import { addDays, buildWeeks, weekdayOf, zurichIsoDate } from '../../src/core/dates.js'
+import {
+  buildWeeks,
+  daysBetween,
+  shiftZurichBy,
+  zurichIsoDate,
+  zurichTime,
+} from '../../src/core/dates.js'
+import { applyWindows, weeksOfSeason, zurichMoment } from '../_lib/weekDates.js'
 import { withDefaults } from '../../src/core/settings.js'
 
 /**
@@ -50,6 +57,7 @@ export default handler(['PATCH', 'DELETE'], async (req: VercelRequest, res: Verc
 
   const input = body(req)
   const started = season.started_at !== null
+  let moved = 0
 
   /* --------------------------------------------------------- Einstellungen */
   if (input.settings !== undefined) {
@@ -81,22 +89,49 @@ export default handler(['PATCH', 'DELETE'], async (req: VercelRequest, res: Verc
     }
   }
 
-  /* ------------------------------------------------------------- Startdatum */
-  if (input.startDate !== undefined) {
-    if (started) throw new HttpError(409, 'Die Saison läuft bereits.')
-    const startDate = requireString(input.startDate, 'Das Startdatum', 10)
-    if (weekdayOf(startDate) !== settingsOf(season).weekStartsOn) {
-      throw new HttpError(400, 'Die Saison muss an einem Montag beginnen.')
-    }
-    const s = settingsOf(season)
-    const windows = buildWeeks({ startDate, weeks: s.weeks, deadlineHour: s.deadlineHour })
-    for (const week of windows) {
-      await sql`
-        UPDATE weeks SET starts_at = ${week.startsAt.toISOString()},
-                         ends_at = ${week.endsAt.toISOString()}
-        WHERE season_id = ${season.id} AND number = ${week.number}
-      `
-    }
+  /**
+   * Die ganze Saison verschieben.
+   *
+   * Angegeben wird, wann Woche 1 beginnt — Datum, Uhrzeit oder beides. Alle
+   * Wochen rücken um denselben Betrag mit, samt ihren Einreicheterminen. Was
+   * der Admin an einzelnen Wochen schon von Hand gerichtet hat, bleibt dabei
+   * erhalten: verschoben wird das Raster, nicht neu gelegt.
+   *
+   * Anders als früher geht das auch, wenn die Saison schon läuft. Genau dann
+   * braucht man es: der Start steht, und dann kommt doch etwas dazwischen. Die
+   * Grenze zieht nicht der Saisonstatus, sondern das Gespielte — eine Woche,
+   * in der schon eine Karte liegt, lässt sich nicht aus ihr herausschieben.
+   */
+  if (input.startDate !== undefined || input.startTime !== undefined) {
+    const weeks = await weeksOfSeason(season.id)
+    if (!weeks.length) throw new HttpError(409, 'Diese Saison hat noch keine Wochen.')
+    const first = weeks[0]
+
+    const startDate =
+      input.startDate === undefined
+        ? zurichIsoDate(first.startsAt)
+        : requireString(input.startDate, 'Das Startdatum', 10)
+    const startTime =
+      input.startTime === undefined
+        ? zurichTime(first.startsAt)
+        : requireString(input.startTime, 'Die Uhrzeit', 5)
+
+    const target = zurichMoment(startDate, startTime, 'Der Saisonstart')
+    const days = daysBetween(zurichIsoDate(first.startsAt), zurichIsoDate(target))
+    const minutes = minutesOfDay(target) - minutesOfDay(first.startsAt)
+
+    moved = await applyWindows(
+      season.id,
+      new Map(
+        weeks.map((week) => [
+          week.id,
+          {
+            startsAt: shiftZurichBy(week.startsAt, days, minutes),
+            endsAt: shiftZurichBy(week.endsAt, days, minutes),
+          },
+        ]),
+      ),
+    )
   }
 
   /* ----------------------------------------------------------------- Status */
@@ -132,25 +167,28 @@ export default handler(['PATCH', 'DELETE'], async (req: VercelRequest, res: Verc
     if (!Number.isInteger(days) || days === 0 || Math.abs(days) > 120) {
       throw new HttpError(400, 'Um wie viele Tage?')
     }
-    const weeks = (await sql`
-      SELECT id, number, starts_at, ends_at FROM weeks
-      WHERE season_id = ${season.id} AND number >= ${from}
-      ORDER BY number
-    `) as any[]
-    const s = settingsOf(season)
-    for (const week of weeks) {
-      const startDate = addDays(zurichIsoDate(new Date(week.starts_at)), days)
-      const windows = buildWeeks({ startDate, weeks: 1, deadlineHour: s.deadlineHour })
-      await sql`
-        UPDATE weeks SET starts_at = ${windows[0].startsAt.toISOString()},
-                         ends_at = ${windows[0].endsAt.toISOString()}
-        WHERE id = ${week.id}
-      `
-    }
+    const weeks = await weeksOfSeason(season.id)
+    moved = await applyWindows(
+      season.id,
+      new Map(
+        weeks
+          .filter((week) => week.number >= from)
+          .map((week) => [
+            week.id,
+            { startsAt: shiftZurichBy(week.startsAt, days), endsAt: shiftZurichBy(week.endsAt, days) },
+          ]),
+      ),
+    )
   }
 
-  json(res, 200, { ok: true })
+  json(res, 200, { ok: true, moved })
 })
+
+/** Minuten seit Mitternacht, in Schweizer Ortszeit. */
+function minutesOfDay(at: Date): number {
+  const [hour, minute] = zurichTime(at).split(':').map(Number)
+  return hour * 60 + minute
+}
 
 /** Wochenfenster neu auslegen, ausgehend vom bisherigen Start. */
 async function relayWeeks(seasonId: string, weeks: number, deadlineHour: number) {

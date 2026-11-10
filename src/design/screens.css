@@ -275,6 +275,12 @@
   border-top: 1px solid var(--border-soft);
 }
 
+/* Der aufgeklappte Termin-Editor einer Woche. */
+.week-dates {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-soft);
+}
+
 .week-row-foot select {
   min-height: 40px;
   padding: 0 var(--space-2);

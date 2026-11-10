@@ -208,3 +208,50 @@ export function timeLeft(until: Date | string, now = new Date()): string {
   const days = Math.floor(hours / 24)
   return `noch ${days} ${days === 1 ? 'Tag' : 'Tage'}`
 }
+
+/* ------------------------------------------------- Termine verschieben */
+
+function pad(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+/** 'HH:MM' eines Moments in Schweizer Ortszeit. */
+export function zurichTime(at: Date | string): string {
+  const p = zurichParts(typeof at === 'string' ? new Date(at) : at)
+  return `${pad(p.hour)}:${pad(p.minute)}`
+}
+
+/** 'YYYY-MM-DD' plus 'HH:MM' als Ortszeit zu einem Moment. */
+export function fromZurichDateTime(isoDate: string, time: string): Date {
+  const [hour, minute] = time.split(':').map(Number)
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour > 23 || minute > 59) {
+    throw new Error(`Keine Uhrzeit: ${time}`)
+  }
+  return fromZurichDate(isoDate, hour, minute)
+}
+
+/** Ganze Tage zwischen zwei 'YYYY-MM-DD'. */
+export function daysBetween(fromIso: string, toIso: string): number {
+  const [fy, fm, fd] = fromIso.split('-').map(Number)
+  const [ty, tm, td] = toIso.split('-').map(Number)
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000)
+}
+
+/**
+ * Einen Termin um Tage und Minuten verschieben — nach der Uhr, nicht nach der
+ * Dauer.
+ *
+ * Der Unterschied zählt: zwischen Ende Oktober und Ende März springt die Uhr,
+ * und genau da liegt die Saison. Wer eine Woche «um sieben Tage» verschiebt,
+ * meint denselben Wochentag zur selben Uhrzeit — nicht 168 Stunden später, was
+ * über die Zeitumstellung hinweg eine Stunde danebenläge.
+ */
+export function shiftZurichBy(at: Date | string, days: number, minutes = 0): Date {
+  const p = zurichParts(typeof at === 'string' ? new Date(at) : at)
+  let total = p.hour * 60 + p.minute + minutes
+  const carry = Math.floor(total / 1440)
+  total = ((total % 1440) + 1440) % 1440
+  const iso = addDays(`${p.year}-${pad(p.month)}-${pad(p.day)}`, days + carry)
+  const [y, m, d] = iso.split('-').map(Number)
+  return fromZurich(y, m, d, Math.floor(total / 60), total % 60)
+}

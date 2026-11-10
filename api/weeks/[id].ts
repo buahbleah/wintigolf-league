@@ -2,12 +2,18 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { sql } from '../_lib/db.js'
 import { body, handler, HttpError, json, param } from '../_lib/http.js'
 import { requireAdmin, requireUser } from '../_lib/auth.js'
+import { applyWindows, weeksOfSeason, zurichMoment } from '../_lib/weekDates.js'
+import { zurichIsoDate, zurichTime } from '../../src/core/dates.js'
 
 /**
- * Eine Woche verwalten: wer den Kurs bestimmt, und ob sie geschlossen ist.
+ * Eine Woche verwalten: ihre Termine, wer den Kurs bestimmt, und ob sie
+ * geschlossen ist.
  *
- * Das Datum einer einzelnen Woche wird nicht hier verschoben, sondern über die
- * Saison — sonst entstünden Lücken oder Überlappungen zwischen den Wochen.
+ * Beginn und Einreichetermin lassen sich hier einzeln setzen, auf die Minute.
+ * Eine Lücke zwischen zwei Wochen ist dabei erlaubt — in der wird eben nicht
+ * gespielt. Eine Überlappung nicht: dann wäre nicht mehr entscheidbar, zu
+ * welcher Woche eine Runde gehört. Geprüft wird darum nie die Woche allein,
+ * sondern das ganze Raster.
  */
 export default handler(['GET', 'PATCH'], async (req: VercelRequest, res: VercelResponse) => {
   const weekId = param(req, 'id')
@@ -50,6 +56,32 @@ export default handler(['GET', 'PATCH'], async (req: VercelRequest, res: VercelR
   const weeks = (await sql`SELECT id, season_id, number FROM weeks WHERE id = ${weekId}`) as any[]
   if (!weeks[0]) throw new HttpError(404, 'Diese Woche gibt es nicht.')
   const week = weeks[0]
+
+  /* ---------------------------------------------------------- Die Termine */
+  const touchesDates =
+    input.startDate !== undefined ||
+    input.startTime !== undefined ||
+    input.endDate !== undefined ||
+    input.endTime !== undefined
+
+  if (touchesDates) {
+    const all = await weeksOfSeason(week.season_id)
+    const current = all.find((w) => w.id === weekId)
+    if (!current) throw new HttpError(404, 'Diese Woche gibt es nicht.')
+
+    const startsAt = zurichMoment(
+      input.startDate ?? zurichIsoDate(current.startsAt),
+      input.startTime ?? zurichTime(current.startsAt),
+      `Der Beginn von Woche ${current.number}`,
+    )
+    const endsAt = zurichMoment(
+      input.endDate ?? zurichIsoDate(current.endsAt),
+      input.endTime ?? zurichTime(current.endsAt),
+      `Der Einreichetermin von Woche ${current.number}`,
+    )
+
+    await applyWindows(week.season_id, new Map([[weekId, { startsAt, endsAt }]]))
+  }
 
   if (input.pickerId !== undefined) {
     const pickerId = input.pickerId === null ? null : String(input.pickerId)

@@ -18,6 +18,10 @@ App speist sich aus denselben Werten.
   **pausieren** — alle Folgewochen rücken automatisch nach.
 - Standardfenster: **Montag 00:00 bis Sonntag 23:59** (Europe/Zurich). Der
   Upload muss innerhalb des Fensters passieren.
+- Der Admin kann **Beginn und Einreichetermin jeder Woche auf die Minute
+  setzen** und die ganze Saison auf einen anderen Start verschieben — auch
+  wenn sie schon läuft. Zwei Wochen dürfen sich dabei nie überlappen, und ein
+  Fenster lässt keine Karte draussen, die schon abgegeben wurde.
 - **Verpasste Woche = 0 Punkte.** Gewertet werden die **besten 8 von 10**
   Wochen, die zwei schlechtesten fallen weg.
 - Eine Runde zählt nur über **18 Löcher**. Neun-Loch-Runden gibt es nicht.
