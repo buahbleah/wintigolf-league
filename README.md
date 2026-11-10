@@ -25,6 +25,9 @@ besten in einem schmalen Fenster anschauen.
 | `node scripts/seed-demo.mjs` | Testsaison mit zwei Konten anlegen (nur Entwicklung) |
 | `node scripts/seed-playoffs.mjs --force` | Fertige Grundsaison mit vier Spielern, um Playoffs zu testen |
 | `node scripts/make-icons.mjs` | App-Icons neu erzeugen |
+| `npm run db:test` | Getrennte Testdatenbank anlegen und Schema einspielen |
+| `node scripts/seed-test.mjs` | Testdatenbank mit drei Konten und einer Saison füllen |
+| `npm run dev:test` | Dev-Server auf Port 5181 gegen die Testdatenbank |
 | `npm test` | Tests |
 | `npm run typecheck` | TypeScript prüfen |
 
@@ -79,6 +82,28 @@ src/
 Das **allererste Konto** braucht keinen Liga-Code und wird automatisch Admin —
 zu diesem Zeitpunkt gibt es noch keine Saison, die einen Code ausgeben könnte.
 Jedes weitere Konto kommt nur mit gültigem Liga-Code hinein.
+
+## Ausprobieren, ohne etwas kaputtzumachen
+
+Die Liga läuft auf einer echten Datenbank mit echten Konten. Zum Ausprobieren
+von Verwaltungsfunktionen — Rollen, Handicaps, Saison löschen — gibt es daneben
+eine getrennte Datenbank in derselben Neon-Instanz:
+
+```bash
+npm run db:test
+```
+
+```bash
+node scripts/seed-test.mjs
+```
+
+```bash
+npm run dev:test
+```
+
+Dann http://localhost:5181 öffnen und als `chef@example.com` mit
+`testlauf-2026` anmelden. Dort darf alles gelöscht werden; die Liga merkt
+nichts davon. Wieder weg mit `node scripts/make-test-db.mjs --drop`.
 
 ## Mails
 

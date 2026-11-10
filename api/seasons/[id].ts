@@ -15,9 +15,39 @@ import { withDefaults } from '../../src/core/settings.js'
  * Gespieltes umdeuten würden: die Zahl der Wochen, die Länge der Eichphase und
  * der Startfaktor.
  */
-export default handler(['PATCH'], async (req: VercelRequest, res: VercelResponse) => {
+export default handler(['PATCH', 'DELETE'], async (req: VercelRequest, res: VercelResponse) => {
   await requireAdmin(req)
   const season = await seasonById(param(req, 'id'))
+
+  /**
+   * Eine Saison wegwerfen.
+   *
+   * Nur, solange niemand eine Karte abgegeben hat — danach hängen Runden,
+   * Belege, Handicap-Verlauf und Abzeichen daran, und das löscht man nicht
+   * aus Versehen weg. Eine gespielte Saison wird abgeschlossen und archiviert,
+   * nicht gelöscht: sie ist die Geschichte der Liga.
+   *
+   * Genau dafür ist das hier da: eine Probesaison zum Ausprobieren soll keine
+   * Einbahnstrasse sein.
+   */
+  if (req.method === 'DELETE') {
+    const played = (await sql`
+      SELECT count(*)::int AS n FROM rounds
+      WHERE season_id = ${season.id} AND status IN ('submitted','confirmed')
+    `) as any[]
+    if (played[0].n > 0) {
+      throw new HttpError(
+        409,
+        played[0].n === 1
+          ? 'In dieser Saison liegt bereits eine abgegebene Karte. Schliess sie ab und archiviere sie, statt sie wegzuwerfen.'
+          : `In dieser Saison liegen ${played[0].n} abgegebene Karten. Schliess sie ab und archiviere sie, statt sie wegzuwerfen.`,
+      )
+    }
+    await sql`DELETE FROM seasons WHERE id = ${season.id}`
+    json(res, 200, { deleted: true })
+    return
+  }
+
   const input = body(req)
   const started = season.started_at !== null
 

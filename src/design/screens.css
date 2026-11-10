@@ -1042,3 +1042,19 @@
   display: block;
   margin: var(--space-2) 0;
 }
+
+/* ----------------------------------------------------- Spielerverwaltung */
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-soft);
+}
+
+.admin-actions .btn {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}

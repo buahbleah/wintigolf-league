@@ -18,6 +18,8 @@ import { Regeln } from '@/screens/Regeln'
 import { SeasonSetup } from '@/screens/admin/SeasonSetup'
 import { SettingsScreen } from '@/screens/admin/SettingsScreen'
 import { WeeksScreen } from '@/screens/admin/WeeksScreen'
+import { PlayersScreen } from '@/screens/admin/PlayersScreen'
+import { AdminHome } from '@/screens/admin/AdminHome'
 import { Wordmark } from '@/ui/Brand'
 import { IconBell, IconCalendar, IconCard, IconChat, IconFlag, IconUser } from '@/ui/Icons'
 
@@ -118,7 +120,10 @@ export default function App() {
         return <SettingsScreen season={league.data.season} onSaved={league.reload} />
       }
       if (area === 'wochen') return <WeeksScreen data={league.data} onChange={league.reload} />
-      return <AdminHome />
+      if (area === 'spieler') {
+        return <PlayersScreen season={league.data.season} onChange={league.reload} />
+      }
+      return <AdminHome data={league.data} onChange={league.reload} />
     }
 
     const empty = { season: null, weeks: [], players: [] }
@@ -163,25 +168,6 @@ export default function App() {
 
     return <Liga data={league.data} loading={league.loading && !league.data} />
   }
-}
-
-function AdminHome() {
-  return (
-    <div className="page">
-      <div className="page-head">
-        <span className="eyebrow">Verwaltung</span>
-        <h1>Was willst du tun?</h1>
-      </div>
-      <div className="stack stack--tight">
-        <button className="btn btn--ghost btn--block" onClick={() => navigate('/admin/wochen')}>
-          Wochen und Kurszuteilung
-        </button>
-        <button className="btn btn--ghost btn--block" onClick={() => navigate('/admin/einstellungen')}>
-          Einstellungen der Liga
-        </button>
-      </div>
-    </div>
-  )
 }
 
 function Tab({
