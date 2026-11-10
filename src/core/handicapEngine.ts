@@ -1,4 +1,4 @@
-import type { LeagueSettings } from './settings'
+import type { LeagueSettings } from './settings.js'
 
 /**
  * Der Handicap-Motor.

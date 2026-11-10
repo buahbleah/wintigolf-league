@@ -17,7 +17,7 @@
  * Darum wird so eine Verschiebung abgewiesen und nicht stillschweigend gemacht.
  */
 
-import { formatDay, zurichIsoDate, zurichTime } from './dates'
+import { formatDay, zurichIsoDate, zurichTime } from './dates.js'
 
 export class WeekWindowError extends Error {}
 

@@ -1,4 +1,4 @@
-import { strokesOnHole, type CourseCard } from './scoring'
+import { strokesOnHole, type CourseCard } from './scoring.js'
 
 /**
  * Matchplay.
