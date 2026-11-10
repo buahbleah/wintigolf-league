@@ -98,8 +98,8 @@ Alle sieben Etappen stehen:
 6. Playoffs im Matchplay, Siegerseite, Handicap-Übernahme in die nächste Saison
 7. Regelseite, Verlaufsgrafik, Loch-für-Loch-Vergleich, App-Icons, Deployment
 
-Zum Livegang fehlt nur noch das Vercel-Projekt — die Schritte stehen in
-[DEPLOY.md](DEPLOY.md).
+Die App läuft: **https://wintigolf-league.vercel.app** — jeder Push auf `main`
+deployt neu. Einrichtung und Betrieb stehen in [DEPLOY.md](DEPLOY.md).
 
 ### Wie das Handicap gerechnet wird
 

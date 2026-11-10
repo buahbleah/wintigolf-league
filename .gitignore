@@ -11,3 +11,7 @@ tsconfig.tsbuildinfo
 .env.local
 .env.*.local
 *.local
+.vercel
+
+.vercel
+.env*
