@@ -99,9 +99,12 @@ CREATE TABLE IF NOT EXISTS courses (
   created_by uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
--- Ein Kurs darf pro Saison nur einmal vorkommen.
-CREATE UNIQUE INDEX IF NOT EXISTS courses_season_name_key
-  ON courses (season_id, lower(name));
+-- Ob ein Kurs pro Saison nur einmal vorkommen darf, entscheidet die
+-- Einstellung allowDuplicateCourses, nicht die Datenbank. Früher stand hier
+-- ein Unique-Index, der das überstimmte: er machte die Einstellung wirkungslos
+-- und verhinderte sogar, dass der Admin einen Kurs korrigiert — der eigene
+-- Name galt dabei als Doppelung.
+DROP INDEX IF EXISTS courses_season_name_key;
 
 CREATE TABLE IF NOT EXISTS course_holes (
   course_id uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,

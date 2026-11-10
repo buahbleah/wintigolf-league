@@ -3,6 +3,7 @@ import { sql } from '../_lib/db.js'
 import { body, handler, HttpError, json, optionalNumber, requireString } from '../_lib/http.js'
 import { requireUser } from '../_lib/auth.js'
 import { currentSeason, settingsOf } from '../_lib/season.js'
+import { removeOrphanCourse } from '../_lib/courses.js'
 
 /**
  * Den Kurs einer Woche eintragen.
@@ -144,10 +145,43 @@ async function create(req: VercelRequest, res: VercelResponse) {
   const holes = normaliseHoles(input.holes)
   const par = holes.reduce((sum, h) => sum + h.par, 0)
 
-  if (!settings.allowDuplicateCourses) {
-    const duplicate = (await sql`
-      SELECT 1 FROM courses WHERE season_id = ${season.id} AND lower(name) = ${name.toLowerCase()}
+  /**
+   * Steht hier schon ein Kurs, wird er ersetzt — das darf nur der Admin, und
+   * nur solange keine Karte abgegeben ist. Deren Punkte hängen an Par und
+   * Stroke-Index genau dieses Kurses; tauscht man ihn darunter weg, stimmt
+   * rückwirkend keine Rechnung mehr.
+   */
+  const replacing: string | null = match ? (match.course_id ?? null) : (week.course_id ?? null)
+  if (replacing) {
+    const played = (await sql`
+      SELECT count(*)::int AS n FROM rounds
+      WHERE course_id = ${replacing} AND status IN ('submitted','confirmed')
     `) as any[]
+    if (played[0].n > 0) {
+      throw new HttpError(
+        409,
+        played[0].n === 1
+          ? 'Auf diesem Kurs liegt schon eine abgegebene Karte. Solange die zählt, bleibt der Kurs stehen.'
+          : `Auf diesem Kurs liegen schon ${played[0].n} abgegebene Karten. Solange die zählen, bleibt der Kurs stehen.`,
+      )
+    }
+  }
+
+  if (!settings.allowDuplicateCourses) {
+    /* Beim Ersetzen zählt der Kurs, der gerade ersetzt wird, nicht als
+       Doppelung — sonst liesse sich ein Tippfehler im eigenen Eintrag nie
+       korrigieren. */
+    const lower = name.toLowerCase()
+    const duplicate = (
+      replacing
+        ? await sql`
+            SELECT 1 FROM courses
+            WHERE season_id = ${season.id} AND lower(name) = ${lower} AND id <> ${replacing}
+          `
+        : await sql`
+            SELECT 1 FROM courses WHERE season_id = ${season.id} AND lower(name) = ${lower}
+          `
+    ) as any[]
     if (duplicate.length) {
       throw new HttpError(409, 'Dieser Kurs wurde in dieser Saison schon gespielt.')
     }
@@ -184,7 +218,20 @@ async function create(req: VercelRequest, res: VercelResponse) {
     await sql`UPDATE weeks SET course_id = ${courseId} WHERE id = ${weekId}`
   }
 
-  json(res, 201, { id: courseId, par })
+  /* Angefangene Karten gehörten zum alten Kurs und taugen für den neuen nicht
+     mehr. Der alte Eintrag selbst wird weggeräumt, sonst sperrt er seinen
+     eigenen Namen für den Rest der Saison. */
+  let droppedDrafts = 0
+  if (replacing && replacing !== courseId) {
+    const dropped = (await sql`
+      DELETE FROM rounds WHERE course_id = ${replacing} AND status IN ('draft','rejected')
+      RETURNING id
+    `) as any[]
+    droppedDrafts = dropped.length
+    await removeOrphanCourse(replacing)
+  }
+
+  json(res, 201, { id: courseId, par, replaced: Boolean(replacing), droppedDrafts })
 }
 
 /** Achtzehn Löcher, jeder Stroke-Index genau einmal. */

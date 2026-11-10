@@ -33,6 +33,9 @@ export function WeeksScreen({ data, onChange }: { data: LeagueData; onChange: ()
   const season = data.season!
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorFor, setErrorFor] = useState<string | null>(null)
+  /* Erst fragen, dann entfernen. */
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
 
   /* Welche Woche gerade bearbeitet wird, und wie ihre Felder stehen. */
   const [editing, setEditing] = useState<string | null>(null)
@@ -54,6 +57,16 @@ export function WeeksScreen({ data, onChange }: { data: LeagueData; onChange: ()
   const active = data.players.filter((p) => p.status === 'active')
   const withoutWeek = active.filter((p) => !data.weeks.some((w) => w.picker?.id === p.id))
 
+  /**
+   * Ein Fehler gehört dorthin, wo geklickt wurde — sonst erscheint die
+   * Meldung zur Saison unten im aufgeklappten Editor einer Woche und wirkt,
+   * als läge es an der Woche.
+   */
+  function fail(tag: string, err: unknown) {
+    setErrorFor(tag)
+    setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.')
+  }
+
   /** Gibt zurück, ob es geklappt hat — der Editor bleibt sonst offen. */
   async function patchWeek(weekId: string, payload: unknown): Promise<boolean> {
     setBusy(weekId)
@@ -63,7 +76,7 @@ export function WeeksScreen({ data, onChange }: { data: LeagueData; onChange: ()
       onChange()
       return true
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.')
+      fail(weekId, err)
       return false
     } finally {
       setBusy(null)
@@ -77,7 +90,7 @@ export function WeeksScreen({ data, onChange }: { data: LeagueData; onChange: ()
       await api.patch(`/api/seasons/${season.id}`, payload)
       onChange()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Das hat nicht geklappt.')
+      fail(tag, err)
     } finally {
       setBusy(null)
     }
@@ -176,7 +189,7 @@ export function WeeksScreen({ data, onChange }: { data: LeagueData; onChange: ()
         </div>
       )}
 
-      {error && !editing && <div className="notice notice--error">{error}</div>}
+      {error && errorFor !== editing && <div className="notice notice--error">{error}</div>}
 
       <div className="stack stack--tight">
         {data.weeks.map((week) => {
@@ -227,6 +240,23 @@ export function WeeksScreen({ data, onChange }: { data: LeagueData; onChange: ()
                 >
                   {week.course ? 'Kurs ändern' : 'Kurs eintragen'}
                 </button>
+                {week.course && (
+                  <button
+                    className="btn btn--quiet"
+                    disabled={busy === week.id}
+                    onClick={async () => {
+                      if (confirmRemove !== week.id) {
+                        setError(null)
+                        setConfirmRemove(week.id)
+                        return
+                      }
+                      setConfirmRemove(null)
+                      await patchWeek(week.id, { courseId: null })
+                    }}
+                  >
+                    {confirmRemove === week.id ? 'Wirklich entfernen?' : 'Kurs entfernen'}
+                  </button>
+                )}
                 <button
                   className="btn btn--quiet"
                   onClick={() => {
@@ -256,7 +286,9 @@ export function WeeksScreen({ data, onChange }: { data: LeagueData; onChange: ()
 
               {editing === week.id && draft && (
                 <div className="stack stack--tight week-dates">
-                  {error && <div className="notice notice--error">{error}</div>}
+                  {error && errorFor === week.id && (
+                    <div className="notice notice--error">{error}</div>
+                  )}
                   <div className="pair">
                     <div className="field">
                       <label htmlFor={`sd-${week.id}`}>Beginn</label>

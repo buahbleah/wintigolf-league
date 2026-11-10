@@ -3,6 +3,7 @@ import { sql } from '../_lib/db.js'
 import { body, handler, HttpError, json, param } from '../_lib/http.js'
 import { requireAdmin, requireUser } from '../_lib/auth.js'
 import { applyWindows, weeksOfSeason, zurichMoment } from '../_lib/weekDates.js'
+import { removeOrphanCourse } from '../_lib/courses.js'
 import { zurichIsoDate, zurichTime } from '../../src/core/dates.js'
 
 /**
@@ -53,9 +54,54 @@ export default handler(['GET', 'PATCH'], async (req: VercelRequest, res: VercelR
   await requireAdmin(req)
   const input = body(req)
 
-  const weeks = (await sql`SELECT id, season_id, number FROM weeks WHERE id = ${weekId}`) as any[]
+  const weeks = (await sql`
+    SELECT id, season_id, number, course_id FROM weeks WHERE id = ${weekId}
+  `) as any[]
   if (!weeks[0]) throw new HttpError(404, 'Diese Woche gibt es nicht.')
   const week = weeks[0]
+
+  /**
+   * Den Kurs einer Woche wieder herausnehmen.
+   *
+   * Falsch eingetragen, der Platz ist doch nicht verfügbar, jemand hat sich
+   * vertan — dann muss die Woche wieder offen sein. Eingetragen wird ein Kurs
+   * über die Kurseingabe; hier geht nur das Gegenteil.
+   *
+   * Nicht mehr, sobald eine Karte abgegeben ist: deren Punkte hängen an Par
+   * und Stroke-Index genau dieses Kurses, und ohne ihn wäre die Runde nicht
+   * mehr nachzurechnen. Angefangene Karten verschwinden dagegen mit — für
+   * einen Kurs, der nicht mehr gilt, taugen sie ohnehin nicht mehr.
+   */
+  if (input.courseId !== undefined) {
+    if (input.courseId !== null) {
+      throw new HttpError(400, 'Einen Kurs trägst du über die Kurseingabe ein.')
+    }
+    if (!week.course_id) throw new HttpError(409, 'Für diese Woche steht gar kein Kurs.')
+
+    const played = (await sql`
+      SELECT count(*)::int AS n FROM rounds
+      WHERE week_id = ${weekId} AND status IN ('submitted','confirmed')
+    `) as any[]
+    if (played[0].n > 0) {
+      throw new HttpError(
+        409,
+        played[0].n === 1
+          ? 'Für diese Woche liegt schon eine abgegebene Karte. Solange die zählt, bleibt auch der Kurs stehen.'
+          : `Für diese Woche liegen schon ${played[0].n} abgegebene Karten. Solange die zählen, bleibt auch der Kurs stehen.`,
+      )
+    }
+
+    const dropped = (await sql`
+      DELETE FROM rounds WHERE week_id = ${weekId} AND status IN ('draft','rejected')
+      RETURNING id
+    `) as any[]
+
+    await sql`UPDATE weeks SET course_id = NULL WHERE id = ${weekId}`
+    await removeOrphanCourse(week.course_id)
+
+    json(res, 200, { removed: true, droppedDrafts: dropped.length })
+    return
+  }
 
   /* ---------------------------------------------------------- Die Termine */
   const touchesDates =
