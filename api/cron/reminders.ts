@@ -19,9 +19,21 @@ import { zurichParts } from '../../src/core/dates.js'
  */
 export default handler(['GET', 'POST'], async (req: VercelRequest, res: VercelResponse) => {
   if (!(await allowed(req))) {
+    /**
+     * Eine abgewiesene Anfrage ist normalerweise nichts Besonderes. Zwei Fälle
+     * sind es doch, und beide enden sonst damit, dass wochenlang keine
+     * Erinnerung rausgeht und es niemandem auffällt — darum stehen sie im
+     * Protokoll.
+     */
     if (!process.env.CRON_SECRET) {
       console.error(
         'CRON_SECRET fehlt — der Zeitplan kommt nicht durch, es gehen keine Erinnerungen raus.',
+      )
+    } else if (req.headers['x-vercel-cron'] !== undefined) {
+      console.error(
+        'Aufruf mit Cron-Kopf, aber ohne gültiges CRON_SECRET. Entweder stimmt der ' +
+          'hinterlegte Wert nicht mehr — dann neu setzen und neu deployen — oder es ' +
+          'war gar nicht der Zeitplan, sondern jemand, der sich dafür ausgibt.',
       )
     }
     throw new HttpError(403, 'Das löst der Zeitplan aus.')
