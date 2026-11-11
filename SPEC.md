@@ -235,9 +235,10 @@ Runde der Saison · Albatros · erste Runde · alle 10 Wochen gespielt.
 
 ## 13. Benachrichtigungen
 
-- **Mail über Brevo** bei: Einladung, Erinnerung einen Tag vor der Deadline,
-  "eine Karte wartet auf deine Bestätigung", "deine Karte wurde abgelehnt",
-  Passwort zurücksetzen.
+- **Mail über Brevo** bei: Erinnerung um 06:00, wenn der Abgabeschluss in
+  weniger als 24 Stunden ist und die Karte noch fehlt; "eine Karte wartet auf
+  deine Bestätigung"; "deine Karte wurde abgelehnt"; Passwort zurücksetzen.
+  Eine Einladungsmail gibt es nicht — eingeladen wird über den Beitrittslink.
 - **In der App** ein Benachrichtigungs-Center (Glocke mit Badge) für Zusagen,
   Bestätigungen, Kommentare und Forumsantworten.
 - Echte Push-Nachrichten später, wenn gewünscht.

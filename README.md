@@ -67,7 +67,7 @@ api/            Vercel-Funktionen
   slots/        Termine am Simulator
   topics/       Clubhaus
   notifications/ Glocke
-  cron/         Erinnerung vor der Deadline
+  cron/         Erinnerung um 06:00, wenn der Abgabeschluss naht
 db/schema.sql   das ganze Schema
 dev/            lässt die API im Vite-Dev-Server laufen
 src/

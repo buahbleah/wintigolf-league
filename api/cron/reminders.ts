@@ -4,15 +4,15 @@ import { handler, HttpError, json } from '../_lib/http.js'
 import { currentUser } from '../_lib/auth.js'
 import { currentSeason } from '../_lib/season.js'
 import { notify } from '../_lib/notify.js'
-import { zurichParts } from '../../src/core/dates.js'
+import { zurichIsoDate, zurichParts } from '../../src/core/dates.js'
 
 /**
- * Die Erinnerung einen Tag vor der Deadline.
+ * Die Erinnerung am letzten Tag vor dem Abgabeschluss.
  *
- * Läuft als Vercel-Cron einmal am Tag und schickt nur dann etwas, wenn die
- * laufende Woche morgen endet — und nur an die, von denen noch keine Karte da
- * ist. Zweimal am selben Tag ausgelöst passiert nichts: der Versand merkt sich
- * seinen Schlüssel.
+ * Läuft als Vercel-Cron jeden Morgen um sechs und schickt nur dann etwas, wenn
+ * die laufende Woche in weniger als vierundzwanzig Stunden endet — und nur an
+ * die, von denen noch keine Karte da ist. Zweimal ausgelöst passiert nichts:
+ * der Versand merkt sich seinen Schlüssel.
  *
  * Aufrufen darf das der Vercel-Cron und ein Admin von Hand. Sonst niemand, denn
  * sonst könnte jeder der Liga Mails schicken lassen.
@@ -58,11 +58,23 @@ export default handler(['GET', 'POST'], async (req: VercelRequest, res: VercelRe
   }
   const week = weeks[0]
 
-  // Nur am Tag vor der Deadline — Ortszeit, nicht UTC.
+  /**
+   * Die letzten vierundzwanzig Stunden vor dem Abgabeschluss.
+   *
+   * Der Lauf ist morgens um sechs und wiederholt sich alle vierundzwanzig
+   * Stunden. Damit fällt vor jeden Abgabeschluss genau ein Lauf in dieses
+   * Fenster — zu welcher Uhrzeit er auch liegt, und ohne dass je zwei
+   * Erinnerungen für dieselbe Woche entstehen.
+   *
+   * Eine Untergrenze gibt es bewusst nicht. Sie würde ein Loch reissen: Ein
+   * Abgabeschluss um 07:00 hätte beim Lauf um 06:00 nur eine Stunde Vorlauf,
+   * beim Lauf des Vortags aber schon fünfundzwanzig — er bekäme also gar keine
+   * Erinnerung mehr.
+   */
   const endsAt = new Date(week.ends_at)
   const hoursLeft = (endsAt.getTime() - Date.now()) / 3600_000
-  if (hoursLeft > 36 || hoursLeft < 2) {
-    json(res, 200, { sent: 0, reason: `Deadline in ${Math.round(hoursLeft)} Stunden` })
+  if (hoursLeft > 24) {
+    json(res, 200, { sent: 0, reason: `Abgabeschluss in ${Math.round(hoursLeft)} Stunden` })
     return
   }
 
@@ -80,24 +92,28 @@ export default handler(['GET', 'POST'], async (req: VercelRequest, res: VercelRe
   `) as any[]
 
   const deadline = zurichParts(endsAt)
+  const uhrzeit = `${String(deadline.hour).padStart(2, '0')}:${String(deadline.minute).padStart(2, '0')}`
+  /* Innerhalb von vierundzwanzig Stunden liegt der Abgabeschluss entweder noch
+     heute oder am nächsten Morgen. "Morgen" zu schreiben, wenn es heute um eins
+     vorbei ist, wäre schlimmer als gar keine Erinnerung. */
+  const wann = zurichIsoDate(endsAt) === zurichIsoDate(new Date()) ? 'heute' : 'morgen'
+
   let sent = 0
   for (const player of missing) {
     const fresh = await notify({
       userId: player.user_id,
       kind: 'deadline',
-      title: `Woche ${week.number} endet morgen`,
-      body: week.course_name
-        ? `${week.course_name} — bis morgen ${String(deadline.hour).padStart(2, '0')}:${String(deadline.minute).padStart(2, '0')}`
-        : undefined,
+      title: `Woche ${week.number} endet ${wann}`,
+      body: week.course_name ? `${week.course_name} — bis ${wann} ${uhrzeit}` : undefined,
       link: '#/woche',
       mail: {
-        subject: `Woche ${week.number} endet morgen`,
+        subject: `Woche ${week.number} endet ${wann}`,
         paragraphs: [
           `Hallo ${player.name}`,
           week.course_name
             ? `Von dir fehlt noch die Karte aus Woche ${week.number} auf ${week.course_name}.`
             : `Von dir fehlt noch die Karte aus Woche ${week.number}.`,
-          `Abgabeschluss ist morgen um ${String(deadline.hour).padStart(2, '0')}:${String(deadline.minute).padStart(2, '0')}. Danach gibt es für die Woche null Punkte.`,
+          `Abgabeschluss ist ${wann} um ${uhrzeit}. Danach gibt es für die Woche null Punkte.`,
           'Denk daran: nie allein spielen — es braucht einen Mitspieler, der die Karte bestätigt.',
         ],
         action: { label: 'Zur Woche', path: '#/woche' },

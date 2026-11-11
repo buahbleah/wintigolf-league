@@ -6,7 +6,8 @@ import { sql } from './db.js'
  * Nur transaktionaler Versand: die Adresse kommt aus dem Konto, niemand landet
  * in einer Kontaktliste, und mit dem Newsletter des Gyms hat das nichts zu tun.
  *
- * Verschickt wird nur bei vier Anlässen: Erinnerung am Tag vor der Deadline,
+ * Verschickt wird nur bei vier Anlässen: Erinnerung am Morgen, wenn der
+ * Abgabeschluss in weniger als vierundzwanzig Stunden ist,
  * "eine Karte wartet auf deine Bestätigung", "deine Karte wurde abgelehnt",
  * Passwort zurücksetzen. Alles andere bleibt in der App.
  *
