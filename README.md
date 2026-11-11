@@ -41,6 +41,7 @@ Projekt-Variablen. `.env.example` zeigt, welche es gibt.
 | `DATABASE_URL` | Neon-Postgres, Datenbank `wintigolf` |
 | `BREVO_API_KEY` | Mails: Deadline-Erinnerung, Zähler-Anfrage, Ablehnung, Passwort |
 | `GOLF_COURSE_API_KEY` | Course Rating und Slope, wenn GSPro sie nicht hergibt |
+| `CRON_SECRET` | Weist den täglichen Zeitplan aus, der die Erinnerung auslöst |
 | `ANTHROPIC_API_KEY` | Scorecards aus dem Bild lesen — Par und Stroke-Index je Loch |
 | `MAIL_IN_DEV` | Auf `1` setzen, wenn lokal wirklich Mails rausgehen sollen |
 

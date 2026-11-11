@@ -18,10 +18,13 @@ import { zurichParts } from '../../src/core/dates.js'
  * sonst könnte jeder der Liga Mails schicken lassen.
  */
 export default handler(['GET', 'POST'], async (req: VercelRequest, res: VercelResponse) => {
-  const fromCron = req.headers['x-vercel-cron'] !== undefined
-  if (!fromCron) {
-    const user = await currentUser(req)
-    if (!user || user.role !== 'admin') throw new HttpError(403, 'Das löst der Cron aus.')
+  if (!(await allowed(req))) {
+    if (!process.env.CRON_SECRET) {
+      console.error(
+        'CRON_SECRET fehlt — der Zeitplan kommt nicht durch, es gehen keine Erinnerungen raus.',
+      )
+    }
+    throw new HttpError(403, 'Das löst der Zeitplan aus.')
   }
 
   const season = await currentSeason()
@@ -94,3 +97,28 @@ export default handler(['GET', 'POST'], async (req: VercelRequest, res: VercelRe
 
   json(res, 200, { sent, week: week.number, open: missing.map((m) => m.name) })
 })
+
+/**
+ * Wer den Versand auslösen darf.
+ *
+ * Vercel hängt an jeden geplanten Aufruf das Geheimnis aus CRON_SECRET, im Kopf
+ * `Authorization: Bearer …`. Nur wer das mitbringt, bringt die Liga dazu, Mails
+ * zu verschicken.
+ *
+ * Früher stand hier der Kopf `x-vercel-cron`. Der taugt nicht: so einen Vermerk
+ * darf jeder an jede Anfrage hängen, er ist eine Behauptung und kein Nachweis.
+ * Die Adresse steht im offenen Internet, also hätte jeder, der sie kennt, den
+ * Versand anstossen können.
+ *
+ * Fehlt das Geheimnis ganz, kommt niemand durch — auch der Zeitplan nicht. Das
+ * ist Absicht: lieber eine Erinnerung, die ausbleibt und sich im Protokoll
+ * erklärt, als eine Tür, die offen steht.
+ *
+ * Ein Admin darf es ausserdem von Hand, mit seiner angemeldeten Sitzung.
+ */
+async function allowed(req: VercelRequest): Promise<boolean> {
+  const secret = process.env.CRON_SECRET
+  if (secret && req.headers.authorization === `Bearer ${secret}`) return true
+  const user = await currentUser(req)
+  return user?.role === 'admin'
+}
